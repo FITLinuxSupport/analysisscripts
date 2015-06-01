@@ -1,6 +1,7 @@
-import urllib
+#!/usr/bin/python
 import json
 #import libuser
+import urllib
 import os
 import shutil
 import smtplib
@@ -9,219 +10,11 @@ import sys
 import collections
 import platform
 import stat
-import copy
 
 from email.mime.text import MIMEText
 
 from pprint import pprint
 from distutils.dir_util import mkpath
-
-class MantidConfigDirectInelastic(object):
-    """Class describes Mantid server specific user's configuration, 
-        necessary for Direct Inelastic reduction and analysis to work
-
-        Valid for Mantid 3.3 available on 01/03/2015 and expects server 
-        to have: 
-        Map/masks folder with layout defined on (e.g. svn checkout)
-        https://svn.isis.rl.ac.uk/InstrumentFiles/trunk
-        User scripts folder with layout defined on 
-        (e.g. git checkout or Mantid script repository set-up):
-        git@github.com:mantidproject/scriptrepository.git
-        see https://github.com/mantidproject/scriptrepository for details
-
-       The class have to change/to be amended if the configuration 
-       changes or has additional features.
-    """
-    def __init__(self,mantid,home,script_repo,map_mask_folder,paraview):
-        """Initialize generic config variables and variables specific to a server"""
-
-        self._mantid_path = str(mantid)
-        self._home_path  = str(home)
-        self._script_repo = str(script_repo)
-        self._map_mask_folder = str(map_mask_folder)
-        self._paraview = str(paraview)
-
-        self._check_server_folders_present()
-        self._inelastic_instruments = ['MAPS','LET','MERLIN','MARI','HET']
-
-        #
-        self._header = ("# This file can be used to override any properties for this installation.\n"
-                        "# Any properties found in this file will override any that are found in the Mantid.Properties file\n"
-                        "# As this file will not be replaced with futher installations of Mantid it is a safe place to put\n"
-                        "# properties that suit your particular installation.\n"
-                        "#\n"
-                        "# See here for a list of possible options:''# http://www.mantidproject.org/Properties_File#Mantid.User.Properties''\n"
-                        "#\n"
-                        "#uncomment to enable archive search - ICat and Orbiter\n"
-                        "#datasearch.searcharchive = On #  may be important for autoreduction to work,\n")
-        #
-        self._footer = ("##\n"
-                        "## LOGGING\n"
-                        "##\n"
-                        "\n"
-                        "## Uncomment to change logging level\n"
-                        "## Default is information\n"
-                        "## Valid values are: error, warning, notice, information, debug\n"
-                        "#logging.loggers.root.level=information\n"
-                        "\n"
-                        "## Sets the lowest level messages to be logged to file\n"
-                        "## Default is warning\n"
-                        "## Valid values are: error, warning, notice, information, debug\n"
-                        "#logging.channels.fileFilterChannel.level=debug\n"
-                        "## Sets the file to write logs to\n"
-                        "#logging.channels.fileChannel.path=../mantid.log\n"
-                        "##\n"
-                        "## MantidPlot\n"
-                        "##\n"
-                        "## Show invisible workspaces\n"
-                        "#MantidOptions.InvisibleWorkspaces=0\n"
-                        "## Re-use plot instances for different plot types\n"
-                        "#MantidOptions.ReusePlotInstances=Off\n\n"
-                        "## Uncomment to disable use of OpenGL to render unwrapped instrument views\n"
-                        "#MantidOptions.InstrumentView.UseOpenGL=Off\n")
-        #
-        self._dynamic_options_base = ['default.facility=ISIS']
-        # Path to python scripts, defined and used by mantid wrt to Mantid Root (this path may be version specific)
-        self._python_mantid_path = ['scripts/Calibration/','scripts/Examples/','scripts/Interface/','scripts/Vates/']
-        # Static paths to user scripts, defined wrt script repository root
-        self._python_user_scripts = set(['direct_inelastic/ISIS/qtiGenie/'])
-        # Methods, which build & verify various parts of Mantid configuration
-        self._dynamic_options = [self._find_paraview,self._set_default_inst,
-                        self._set_script_repo, # this would be necessary to have on an Instrument scientist account, disabled on generic setup
-                        self._def_python_search_path,
-                        self._set_datasearch_directory,self._set_rb_directory]
-        self._instr_name=None
-        self._cycle_folder=[]
-
-    def is_inelastic(self,instr_name):
-        """Check if the instrument is inelastic"""
-        if instr_name in self._inelastic_instruments:
-            return True
-        else:
-            return False
-    #
-    def setup_user(self,fedid,instr,rb_folder,cycle_folders):
-        """Define settings, specific to a user"""
-        #
-        if not self.is_inelastic(instr):
-           raise RuntimeError('Instrument {0} is not among acceptable instruments'.format(instrument))
-        self._instr_name=str(instr)
-
-        self._fedid = str(fedid)
-        user_folder = os.path.join(self._home_path,self._fedid)
-        if not os.path.exists(user_folder):
-            raise RuntimeError("User with fedID {0} does not exist. Create such user folder first".format(fedid))
-        if not os.path.exists(str(rb_folder)):
-            raise RuntimeError("Experiment folder with {0} does not exist. Create such folder first".format(rb_folder))
-        #
-        self._rb_folder_dir = str(rb_folder)
-        # how to check cycle folders, they may not be available
-        self._cycle_folder=[]
-        for folder in cycle_folders:
-            self._cycle_folder.append(str(folder))
-        # Initialize configuration settings 
-        self._dynamic_options_val = copy.deepcopy(self._dynamic_options_base)
-        self._init_config()
-    #
-    def  _check_server_folders_present(self):
-        """Routine checks all necessary server folder are present"""
-        if not os.path.exists(self._mantid_path):
-            raise RuntimeError("SERVER ERROR: no correct mantid path defined at {0}".format(self._mantid_path))
-        if not os.path.exists(self._home_path):
-            raise RuntimeError("SERVER ERROR: no correct home path defined at {0}".format(self._home_path))
-        if not os.path.exists(self._script_repo):
-            raise RuntimeError(("SERVER ERROR: no correct user script repository defined at {0}\n"
-                                "Check out Mantid script repository from account, which have admin rights").format(self._script_repo))
-        if not os.path.exists(self._map_mask_folder):
-            raise RuntimeError(("SERVER ERROR: no correct map/mask folder defined at {0}\n"
-                                "Check out Mantid map/mask files from svn at https://svn.isis.rl.ac.uk/InstrumentFiles/trunk")\
-                                .format(self._map_mask_folder))
-
-    def _init_config(self):
-        """Execute Mantid properties setup methods"""
-        for fun in self._dynamic_options:
-            fun()
-    #
-    def _find_paraview(self):
-        if os.path.exists(self._paraview):
-            self._dynamic_options_val.append('paraview.ignore=0')
-        else:
-            self._dynamic_options_val.append('paraview.ignore=1')
-    #
-    def _set_default_inst(self):
-        if self._instr_name:
-            self._dynamic_options_val.append('default.instrument={0}'.format(self._instr_name))
-        else:
-            self._dynamic_options_val.append('default.instrument={0}'.format('MARI'))
-    #
-    def _set_script_repo(self):
-        self._dynamic_options_val.append('#ScriptLocalRepository={0}'.format(self._script_repo))
-    #
-    def _def_python_search_path(self):
-        """Define path for Mantid Inelastic python scripts"""
-        # Note, instrument name script folder is currently upper case on GIT
-        self._python_user_scripts.add(os.path.join('direct_inelastic/',str.upper(self._instr_name))+'/')
-
-        path = os.path.join(self._mantid_path,'scripts/')
-        for part in self._python_mantid_path:
-            path +=';'+os.path.join(self._mantid_path,part)
-        for part in self._python_user_scripts:
-            path +=';'+os.path.join(self._script_repo,part)
-
-        self._dynamic_options_val.append('pythonscripts.directories=' + path)
-    #
-    def _set_rb_directory(self):
-       self._dynamic_options_val.append('defaultsave.directory={0}'.format(self._rb_folder_dir))
-    #
-    def _set_datasearch_directory(self):
-        """Note, map/mask instrument folder is lower case as if loaded from SVN. 
-           Autoreduction may have it upper case"""
-
-        user_data_dir = os.path.abspath('{0}'.format(self._rb_folder_dir))
-        map_mask_dir  = os.path.abspath(os.path.join('{0}'.format(self._map_mask_folder),'{0}'.format(str.lower(self._instr_name))))
-        
-        all_folders=self._cycle_folder
-        data_dir = os.path.abspath('{0}'.format(all_folders[0]))
-        for folders in all_folders[1:]:
-             data_dir +=';'+os.path.abspath('{0}'.format(all_folders[0]))
-
-        self._dynamic_options_val.append('datasearch.directories='+user_data_dir+';'+map_mask_dir+';'+data_dir)
-    #
-    def save_config(self):
-        """Save generated Mantid configuration file into user's home folder"""
-
-        config_path = os.path.join(self._home_path,self._fedid,'.mantid')
-        if not os.path.exists(config_path):
-            err = os.mkdir(config_path)
-            if err: 
-                raise RuntimeError('can not find or create Mantid configuration path {0}'.format(config_path))
-        config_file = os.path.join(config_path,'Mantid.user.properties')
-        if os.path.exists(config_file):
-            return
-        #
-        fp = open(config_file,'w')
-        fp.write(self._header)
-        fp.write('## -----   Generated user properties ------------ \n')
-        fp.write('##\n')
-        for opt in self._dynamic_options_val:
-            fp.write(opt)
-            fp.write('\n##\n')
-        fp.write(self._footer)
-        fp.close()
-        if platform.system() != 'Windows':
-            os.system('chown '+self._fedid+' '+config_file)
-#
-class UserProperties(object):
-    """Helper class to define & retrieve user properties"""
-    def __init__(self):
-        self.instrument=None
-        self.cycle_folder=set()
-        self.rb_dir = None
-#
-def copy_and_overwrite(from_path, to_path):
-    if os.path.exists(to_path):
-        shutil.rmtree(to_path)
-    shutil.copytree(from_path, to_path)
 
 def getUidByUname(uname):
     return os.popen("id -u %s" % uname).read().strip()
@@ -277,15 +70,30 @@ def test_path(path):
         print "Path OK " + path
     else:
         send_error(path,1,1)
+#-------------------------------------------------------------
+# Server specific part with hard-coded path-es
+#-------------------------------------------------------------
+if platform.system() == 'Windows':
+    sys.path.insert(0,'c:/Mantid/Code/Mantid/scripts/Inelastic/Direct')
+    WinDebug=True
+else:
+    sys.path.insert(0,'/opt/mantidnightly/scripts/Inelastic/Direct/')
+    #sys.path.insert(0,'/opt/Mantid/scripts/Inelastic/Direct/')
+    WinDebug=False
 
+try:
+    from ISISDirecInelasticConfig import MantidConfigDirectInelastic,UserProperties
+    buildISISDirectConfig=True
+except:
+    buildISISDirectConfig=False
 
-WinDebug=False
+#
 #-------------------------------------------------------------
 # Path needed on server for this script to work
 #-------------------------------------------------------------
 if WinDebug:
-    rootDir = r"d:\users\abuts\Documenst/"
-    analysisDir= r'd:\users\abuts\SVN\Mantid\Mantid_testing/'
+    rootDir = r"d:/Data/Mantid_Testing"
+    analysisDir= os.path.join(rootDir,'config_script_test_folder')
 else:
     rootDir = "/home/"
     test_path(rootDir)
@@ -294,33 +102,19 @@ else:
 
 # On Rutherford:
 MantidDir = '/opt/Mantid'
-#UserScriptRepoDir = '/usr/local/mprogs/User/Mantid_ScriptRepository'
 MapMaskDir = '/usr/local/mprogs/InstrumentFiles/'
-#MapMaskDir = '/usr/local/mprogs/InstrumentFiles/'
 UserScriptRepoDir = '/opt/UserScripts'
-Paraview = '/usr/bin/paraview'
 
 #Win Debug
 if WinDebug:
-    MantidDir = "c:/mprogs/MantidInstall"
-    UserScriptRepoDir = r"D:\users\abuts\SVN\Mantid\scriptrepository_mantid/"
-    MapMaskDir =  r'D:\users\abuts\SVN\ISIS\InstrumentFiles_svn/'
-    Paraview = r"c:\Programming\Paraview_Installed"
-#else:
-#    san1 = "/san1"
-#    test_path(san1)
-#    san2 = "/san2"
-#    test_path(san2)
-#    san3 = "/san3"
-#    test_path(san3)
-#    san4 = "/san4"
-#    test_path(san4)
-#    san5 = "/san5"
-#    test_path(san5)
-#    san6 = "/san6"
-#    test_path(san6)
+    MantidDir = r"c:\Mantid\Code\builds\br_master\bin\Release"
+    UserScriptRepoDir = os.path.join(analysisDir,"UserScripts")
+    MapMaskDir =  os.path.join(analysisDir,"InstrumentFiles")
+else:
+    home = '/home'
 
-#    san = san6
+
+
 
 #admin = libuser.admin()
 
@@ -342,7 +136,8 @@ else:
     ExpDescriptorsFile = "/tmp/excitations.txt"
 
 # Get the user office data.
-urllib.urlretrieve("http://icatingest.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile)
+#urllib.urlretrieve("http://icatingest.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile)
+urllib.urlretrieve("http://fitlnxdeploy.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile)
 test_path(ExpDescriptorsFile)
 
 #Open the data
@@ -354,10 +149,13 @@ if not WinDebug:
     test_path("/etc/samba/smb.conf")
     os.system("cp -f /etc/samba/smb.tmpl /etc/samba/smb.conf")
     smb = open('/etc/samba/smb.conf', 'a')
-try:
-    mcf = MantidConfigDirectInelastic(MantidDir,rootDir,UserScriptRepoDir,MapMaskDir,Paraview)
-except RuntimeError as er:
-    send_error(er.message,2,1)
+if buildISISDirectConfig:
+    try:
+        mcf = MantidConfigDirectInelastic(MantidDir,rootDir,UserScriptRepoDir,MapMaskDir)
+    except RuntimeError as er:
+        send_error(er.message,2,1)
+        buildISISDirectConfig=False
+        #raise RuntimeError(" Server does not have appropriate folders for DirectInelastic reduction. Can not continue")
 
 
 user_list = {}
@@ -386,28 +184,17 @@ for experiment in range(len(data["experiments"])):
     #  print instrument
     #  print cycle
 
-
-    if WinDebug:
-        rbdir = r'd:\users\abuts\SVN\Mantid\Mantid_testing\tt'
-        cycle_dir1 = r'd:\users\abuts\SVN\Mantid\Mantid_testing'
-    else:
+    if not WinDebug:
         #Make a group
         os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
         os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
-        rbdir = analysisDir + instrument.upper() + "/" + cycle + "/" + rbnumber
+        rbdir = os.path.join(analysisDir,instrument.upper(),cycle,rbnumber)
 
         #Make the paths to the analysis RB directories.
-        cycle_dir1 = analysisDir + instrument
-    cycle_dir2 = cycle_dir1 + "/" + cycle
-    #
-    mkpath(cycle_dir1)
-    test_path(cycle_dir1)
-    mkpath(cycle_dir2)
-    test_path(cycle_dir2)
 
-    mkpath(rbdir)
-    test_path(rbdir)
-    if not WinDebug:
+        mkpath(rbdir)
+        test_path(rbdir)
+
         #Change permissions on the RB directories.
         os.system("chgrp " + rbnumber + " " + rbdir)
         os.system("chmod 2770 " + rbdir)
@@ -432,12 +219,19 @@ for experiment in range(len(data["experiments"])):
         fedid = data["experiments"][experiment]["Permissions"][permission]["fedid"]
 
         if WinDebug:
+            # Create user for testing purpose. In real life it is created
+            # somewhere else.
             user_folder = os.path.join(rootDir,str(fedid))
             mkpath(user_folder)
+            # for testing purposes we will create rb folders within users folder
+            # and would not deal with likning these folders
+            rbdir = os.path.join(user_folder,rbnumber)
+            mkpath(rbdir)
         else:
             if os.system("su -l -c 'exit' " + fedid) != 0:
                 user_error=fedid + " User cannot be found - account is either disabled or does not exist."
                 send_error(user_error,3,0)
+                continue
             else:
                 print fedid + " OK"
                 if os.path.exists("/home/"+fedid):
@@ -449,42 +243,46 @@ for experiment in range(len(data["experiments"])):
                         os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
                         os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
                 else:
-                    mkpath(san + "/" + fedid)
-                    test_path(san + "/" + fedid)
-                    os.system("chown -R " + fedid + "." + fedid + " " + san+"/"+fedid)
+                    mkpath(home + "/" + fedid)
+                    test_path(home  + "/" + fedid)
+                    os.system("chown -R " + fedid + "." + fedid + " " + home +"/"+fedid)
                     if os.path.exists("/home/"+fedid):
                         if os.path.exists("/home/" + fedid + "/" + rbnumber):
-                            print "Link exists: " + "/home/" + fedid + "/" + rbnumber
+                            print "Link  exists: " + "/home/" + fedid + "/" + rbnumber
                             os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
                         else:
                             os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
                             os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
                     else:
-                        os.symlink(san+"/"+fedid,"/home/"+fedid)
+                        os.symlink(home +"/"+fedid,"/home/"+fedid)
                         os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
                         os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
                     
-        # Define user
+        if not buildISISDirectConfig:
+            continue
+        # Define Direct inelastic User
         if mcf.is_inelastic(instrument):
             if not fedid in user_list:
-                user_list[fedid] = UserProperties()
+                user_list[str(fedid)] = UserProperties()
             current_user = user_list[fedid]
-            # Define instrument user will deploy (only one currently supported)
-            current_user.instrument= instrument
-            # define data search path
-            current_user.cycle_folder.add(cycle_dir2)
-            # define curent (recent) rb folder
-            current_user.rb_dir = rbdir
+            # Define user's properties, e.g. cycle, instrument, start data 
+            # and rb folder. If more then one record per user, the latest will be active
+            rb_user_folder = os.path.join(mcf._home_path,str(fedid),str(rbnumber))
+            # rb folder must be present!
+            current_user.set_user_properties(str(instrument),str(date),str(cycle),rb_user_folder)
         #end if
 json_data.close()
 if not WinDebug:
     smb.close()
-
-# Generate Mantid configurations for all users who does not yet have their own
-for fedid,user_prop in user_list.iteritems():
-    try:
-        mcf.setup_user(fedid,user_prop.instrument,user_prop.rb_dir,user_prop.cycle_folder)
-        mcf.save_config()
-    except RuntimeError as er:
-        send_error(er.message,2,1)
+# Usually user's configuration file is not overwritten if its modification date is late then
+# user start date. Set below to True if you want to force overwriting configurations
+#mcf._force_change_config = True
+if buildISISDirectConfig:
+    # Generate Mantid configurations for all users who does not yet have their own
+    for fedid,user_prop in user_list.iteritems():
+        try:
+            mcf.init_user(fedid,user_prop)
+            mcf.generate_config()
+        except RuntimeError as er:
+            send_error(er.message,2,1)
 
