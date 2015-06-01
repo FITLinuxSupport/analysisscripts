@@ -92,15 +92,16 @@ except:
 # Path needed on server for this script to work
 #-------------------------------------------------------------
 if WinDebug:
-    rootDir = r"d:/Data/Mantid_Testing"
-    analysisDir= os.path.join(rootDir,'config_script_test_folder')
+    base = 'd:/Data/Mantid_Testing/config_script_test_folder'
+    rootDir = os.path.join(base,'users')
+    analysisDir= base
 else:
     rootDir = "/home/"
     test_path(rootDir)
     analysisDir = "/instrument/"
     test_path(analysisDir)
 
-# On Rutherford:
+# On analysis machines:
 MantidDir = '/opt/Mantid'
 MapMaskDir = '/usr/local/mprogs/InstrumentFiles/'
 UserScriptRepoDir = '/opt/UserScripts'
@@ -136,8 +137,8 @@ else:
     ExpDescriptorsFile = "/tmp/excitations.txt"
 
 # Get the user office data.
-#urllib.urlretrieve("http://icatingest.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile)
-urllib.urlretrieve("http://fitlnxdeploy.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile)
+urllib.urlretrieve("http://icatingest.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile)
+#urllib.urlretrieve("http://fitlnxdeploy.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile+'.old')
 test_path(ExpDescriptorsFile)
 
 #Open the data
