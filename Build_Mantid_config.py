@@ -278,6 +278,8 @@ if not WinDebug:
 # Usually user's configuration file is not overwritten if its modification date is late then
 # user start date. Set below to True if you want to force overwriting configurations
 #mcf._force_change_config = True
+# replace users sample script. Should be used only if bugs are identified in the previous sample script.
+#mcf._force_change_script = True
 if buildISISDirectConfig:
     # Generate Mantid configurations for all users who does not yet have their own
     for fedid,user_prop in user_list.iteritems():
