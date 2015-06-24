@@ -11,6 +11,11 @@ import collections
 import platform
 import stat
 import time
+try:
+    import grp
+    WinDebug=False
+except:
+    WinDebug = True
 
 from email.mime.text import MIMEText
 
@@ -64,18 +69,20 @@ def send_error(MessBody=None,ErrorCode=0,ExitScript=0):
 
     if ErrorCode == 1:
         sys.exit()
-
+#
 def check_or_create_rb_link(fedid,rbdir,rbnumber):
     """Function checks if  link to RB folder exist for the user
        and if not creates one"""
 
     #os.system("chown -R " + fedid + "." + fedid + " " + "/home/"+fedid)
+    # Add user to the appropriate group
+    os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
+    # Create link to appropriate RB folder.
     if os.path.exists("/home/" + fedid + "/" + rbnumber):
         print "Link exists: " + "/home/" + fedid + "/" + rbnumber
-        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
     else:
        os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
-       os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
+
 
 def test_path(path):
     if os.path.exists(path):
@@ -173,7 +180,7 @@ if buildISISDirectConfig:
 
 user_list = {}
 user_verified_list = []
-
+users_rejected_list = []
 #Timinig
 loop_start_time = time.time()
 group_creation_t = []
@@ -182,21 +189,20 @@ user_check_t = []
 link_create_t = []
 user_create_folder_t = []
 #print len(data["experiments"])
-for experiment in range(len(data["experiments"])):
+for experiment in data["experiments"]:
 
     #RB number for the experiment
-    nrbnumber = data["experiments"][experiment]["RbNumber"]
+    nrbnumber  = experiment["RbNumber"]
     rbnumber = "RB" + nrbnumber
 
     #Experiment start date
-    date = data["experiments"][experiment]["StartDate"]
+    date = experiment["StartDate"]
 
     #Instrument name
-    instrument = data["experiments"][experiment]["Instrument"]
-    instrument = instrument
+    instrument = experiment["Instrument"]
 
     #Cycle number
-    cycle = data["experiments"][experiment]["Cycle"]
+    cycle = experiment["Cycle"]
     cycle = cycle.upper()
     cycle = "CYCLE" + cycle.replace('/', '')
 
@@ -206,10 +212,16 @@ for experiment in range(len(data["experiments"])):
     #  print cycle
 
     if not WinDebug:
-        #Make a group
         group_start=time.time()
-        os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
-        os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
+        try:
+            group_descriptor = grp.getgrgid(nrbnumber)
+            # we assume that if group already exist, all folders below exist
+            group_members = group_descriptor[3]
+        except KeyError:
+            #Make new empty group
+        	os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
+	        os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
+            group_members=[]
         rbdir = os.path.join(analysisDir,instrument.upper(),cycle,rbnumber)
 
         #Make the paths to the analysis RB directories.
@@ -240,9 +252,13 @@ for experiment in range(len(data["experiments"])):
         samba_creatrion_t.append(samba_end - group_end)
 
     all_users_t_start = samba_end
-    for permission in range(len(data["experiments"][experiment]["Permissions"])):
-        email = data["experiments"][experiment]["Permissions"][permission]["email"]
-        fedid = data["experiments"][experiment]["Permissions"][permission]["fedid"]
+    participents = experiment["Permissions"]
+    for participent in participents:
+        email = participent["email"]
+        fedid = participent["fedid"]
+
+        if fedid in users_rejected_list:
+            continue
 
         if WinDebug:
             # Create user for testing purpose. In real life it is created
@@ -258,15 +274,20 @@ for experiment in range(len(data["experiments"])):
             if not fedid in user_verified_list:
                 if os.system("su -l -c 'exit' " + fedid) != 0:
                     user_error=fedid + " User cannot be found - account is either disabled or does not exist."
+                    users_rejected_list.append(fedid)
                     send_error(user_error,3,0)
                     continue
                 else:
                    user_verified_list.append(fedid)
-
+            print fedid + " OK"
+            # if person is already in this group --
+            #everything has been created for him/her.
+            # Do nothing with this user and this cycle
+            if fedid in group_members:
+                continue
+            #
             user_t_ok = time.time()
             user_t_create_folder = user_t_ok
-            #
-            print fedid + " OK"
             if os.path.exists("/home/"+fedid):
                 check_or_create_rb_link(fedid,rbdir,rbnumber)
                 user_t_rb_link=time.time()
@@ -277,6 +298,7 @@ for experiment in range(len(data["experiments"])):
                 os.system("chown -R " + fedid + "." + fedid + " " + home +"/"+fedid)
                 user_t_create_folder = time.time()
                 #
+                #--------------
                 user_t_ok = user_t_create_folder
                 check_or_create_rb_link(fedid,rbdir,rbnumber)
                 user_t_rb_link=time.time()

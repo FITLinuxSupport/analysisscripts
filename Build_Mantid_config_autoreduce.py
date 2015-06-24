@@ -180,7 +180,6 @@ for experiment in range(len(data["experiments"])):
             os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
             os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
         rbdir = analysisDir + instrument.upper() + "/" + cycle + "/" + rbnumber
-
         #Make the paths to the analysis RB directories.
         cycle_dir1 = analysisDir + instrument
     cycle_dir2 = cycle_dir1 + "/" + cycle

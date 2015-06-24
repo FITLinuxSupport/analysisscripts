@@ -10,6 +10,11 @@ import sys
 import collections
 import platform
 import stat
+try:
+    import grp
+    WinDebug=False
+except:
+    WinDebug = True
 
 from email.mime.text import MIMEText
 
@@ -69,12 +74,14 @@ def check_or_create_rb_link(fedid,rbdir,rbnumber):
        and if not creates one"""
 
     #os.system("chown -R " + fedid + "." + fedid + " " + "/home/"+fedid)
+    # Add user to the appropriate group
+    os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
+    # Create link to appropriate RB folder.
     if os.path.exists("/home/" + fedid + "/" + rbnumber):
         print "Link exists: " + "/home/" + fedid + "/" + rbnumber
-        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
     else:
        os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
-       os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
+
 
 def test_path(path):
     if os.path.exists(path):
@@ -173,22 +180,28 @@ if buildISISDirectConfig:
 user_list = {}
 user_verified_list = []
 users_rejected_list = []
+
+
+
+
+
+
+
 #print len(data["experiments"])
-for experiment in range(len(data["experiments"])):
+for experiment in data["experiments"]:
 
     #RB number for the experiment
-    nrbnumber = data["experiments"][experiment]["RbNumber"]
+    nrbnumber  = experiment["RbNumber"]
     rbnumber = "RB" + nrbnumber
 
     #Experiment start date
-    date = data["experiments"][experiment]["StartDate"]
+    date = experiment["StartDate"]
 
     #Instrument name
-    instrument = data["experiments"][experiment]["Instrument"]
-    instrument = instrument
+    instrument = experiment["Instrument"]
 
     #Cycle number
-    cycle = data["experiments"][experiment]["Cycle"]
+    cycle = experiment["Cycle"]
     cycle = cycle.upper()
     cycle = "CYCLE" + cycle.replace('/', '')
 
@@ -198,9 +211,15 @@ for experiment in range(len(data["experiments"])):
     #  print cycle
 
     if not WinDebug:
-        #Make a group
-        os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
-        os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
+        try:
+            group_descriptor = grp.getgrgid(nrbnumber)
+            # we assume that if group already exist, all folders below exist
+            group_members = group_descriptor[3]
+        except KeyError:
+            #Make new empty group
+            os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
+            os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
+            group_members=[]
         rbdir = os.path.join(analysisDir,instrument.upper(),cycle,rbnumber)
 
         #Make the paths to the analysis RB directories.
@@ -227,9 +246,10 @@ for experiment in range(len(data["experiments"])):
         # Append the string to the smb.conf file:
         smb.write(SAMBARB)
 
-    for permission in range(len(data["experiments"][experiment]["Permissions"])):
-        email = data["experiments"][experiment]["Permissions"][permission]["email"]
-        fedid = data["experiments"][experiment]["Permissions"][permission]["fedid"]
+    participents = experiment["Permissions"]
+    for participent in participents:
+        email = participent["email"]
+        fedid = participent["fedid"]
 
         if fedid in users_rejected_list:
             continue
@@ -240,7 +260,7 @@ for experiment in range(len(data["experiments"])):
             user_folder = os.path.join(rootDir,str(fedid))
             mkpath(user_folder)
             # for testing purposes we will create rb folders within users folder
-            # and would not deal with likning these folders
+            # and would not deal with linking these folders
             rbdir = os.path.join(user_folder,rbnumber)
             mkpath(rbdir)
         else:
@@ -253,6 +273,12 @@ for experiment in range(len(data["experiments"])):
                 else:
                    user_verified_list.append(fedid)
             print fedid + " OK"
+            # if person is already in this group --
+            #everything has been created for him/her.
+            # Do nothing with this user and this cycle
+            if fedid in group_members:
+                continue
+            #
             if os.path.exists("/home/"+fedid):
                 check_or_create_rb_link(fedid,rbdir,rbnumber)
             else:
