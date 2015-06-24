@@ -68,6 +68,7 @@ def send_error(MessBody=None,ErrorCode=0,ExitScript=0):
 def check_or_create_rb_link(fedid,rbdir,rbnumber):
     """Function checks if  link to RB folder exist for the user
        and if not creates one"""
+
     #os.system("chown -R " + fedid + "." + fedid + " " + "/home/"+fedid)
     if os.path.exists("/home/" + fedid + "/" + rbnumber):
         print "Link exists: " + "/home/" + fedid + "/" + rbnumber
@@ -251,32 +252,35 @@ for experiment in range(len(data["experiments"])):
             mkpath(rbdir)
         else:
             user_t_start = time.time()
-            if os.system("su -l -c 'exit' " + fedid) != 0:
-                user_error=fedid + " User cannot be found - account is either disabled or does not exist."
-                send_error(user_error,3,0)
-                user_t_ok = time.time()
-                continue
-            else:
-                user_t_ok = time.time()
-                user_t_create_folder = user_t_ok
-                print fedid + " OK"
-                if os.path.exists("/home/"+fedid):
-                    check_or_create_rb_link(fedid,rbdir,rbnumber)
-                    user_t_rb_link=time.time()
+            if not fedid in user_verified_list:
+                if os.system("su -l -c 'exit' " + fedid) != 0:
+                    user_error=fedid + " User cannot be found - account is either disabled or does not exist."
+                    send_error(user_error,3,0)
+                    continue
                 else:
-                    # Create user's folder
-                    mkpath(home + "/" + fedid)
-                    test_path(home  + "/" + fedid)
-                    os.system("chown -R " + fedid + "." + fedid + " " + home +"/"+fedid)
-                    user_t_create_folder = time.time()
-                    #
-                    user_t_ok = user_t_create_folder
-                    check_or_create_rb_link(fedid,rbdir,rbnumber)
-                    user_t_rb_link=time.time()
+                   user_verified_list.append(fedid)
+
+            user_t_ok = time.time()
+            user_t_create_folder = user_t_ok
+            #
+            print fedid + " OK"
+            if os.path.exists("/home/"+fedid):
+                check_or_create_rb_link(fedid,rbdir,rbnumber)
+                user_t_rb_link=time.time()
+            else:
+                # Create user's folder
+                mkpath(home + "/" + fedid)
+                test_path(home  + "/" + fedid)
+                os.system("chown -R " + fedid + "." + fedid + " " + home +"/"+fedid)
+                user_t_create_folder = time.time()
                 #
-                user_check_t.append(user_t_ok-user_t_start)
-                user_create_folder_t.append(user_t_create_folder-user_t_ok)
-                link_create_t.append(user_t_rb_link-user_t_ok)
+                user_t_ok = user_t_create_folder
+                check_or_create_rb_link(fedid,rbdir,rbnumber)
+                user_t_rb_link=time.time()
+                #
+            user_check_t.append(user_t_ok-user_t_start)
+            user_create_folder_t.append(user_t_create_folder-user_t_ok)
+            link_create_t.append(user_t_rb_link-user_t_ok)
 
         if not buildISISDirectConfig:
             continue

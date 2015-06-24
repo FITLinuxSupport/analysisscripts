@@ -76,7 +76,6 @@ def check_or_create_rb_link(fedid,rbdir,rbnumber):
        os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
 
-  
 def test_path(path):
     if os.path.exists(path):
         print "Path OK " + path
@@ -172,7 +171,7 @@ if buildISISDirectConfig:
 
 
 user_list = {}
-
+user_verified_list = []
 #print len(data["experiments"])
 for experiment in range(len(data["experiments"])):
 
@@ -241,21 +240,23 @@ for experiment in range(len(data["experiments"])):
             rbdir = os.path.join(user_folder,rbnumber)
             mkpath(rbdir)
         else:
-            if os.system("su -l -c 'exit' " + fedid) != 0:
-                user_error=fedid + " User cannot be found - account is either disabled or does not exist."
-                send_error(user_error,3,0)
-                continue
-            else:
-                print fedid + " OK"
-                if os.path.exists("/home/"+fedid):
-                    check_or_create_rb_link(fedid,rbdir,rbnumber)
+            if not fedid in user_verified_list:
+                if os.system("su -l -c 'exit' " + fedid) != 0:
+                    user_error=fedid + " User cannot be found - account is either disabled or does not exist."
+                    send_error(user_error,3,0)
+                    continue
                 else:
-                    # Create user's folder
-                    mkpath(home + "/" + fedid)
-                    test_path(home  + "/" + fedid)
-                    os.system("chown -R " + fedid + "." + fedid + " " + home +"/"+fedid)
-                    #--------------
-                    check_or_create_rb_link(fedid,rbdir,rbnumber)
+                   user_verified_list.append(fedid)
+            print fedid + " OK"
+            if os.path.exists("/home/"+fedid):
+                check_or_create_rb_link(fedid,rbdir,rbnumber)
+            else:
+                # Create user's folder
+                mkpath(home + "/" + fedid)
+                test_path(home  + "/" + fedid)
+                os.system("chown -R " + fedid + "." + fedid + " " + home +"/"+fedid)
+                #--------------
+                check_or_create_rb_link(fedid,rbdir,rbnumber)
                     
         if not buildISISDirectConfig:
             continue
