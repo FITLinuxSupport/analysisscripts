@@ -172,6 +172,9 @@ if buildISISDirectConfig:
 
 
 user_list = {}
+user_verified_list = []
+
+#Timinig
 loop_start_time = time.time()
 group_creation_t = []
 samba_creatrion_t = []
