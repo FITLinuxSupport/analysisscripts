@@ -10,6 +10,11 @@ import collections
 import platform
 import stat
 import copy
+try:
+    import grp
+    WinDebug=False
+except:
+    WinDebug = True
 
 from email.mime.text import MIMEText
 
@@ -17,13 +22,7 @@ from pprint import pprint
 from distutils.dir_util import mkpath
 
 
-class UserProperties(object):
-    """Helper class to define & retrieve user properties"""
-    def __init__(self):
-        self.instrument=None
-        self.cycle_folder=set()
-        self.rb_dir = None
-#
+
 def copy_and_overwrite(from_path, to_path):
     if os.path.exists(to_path):
         shutil.rmtree(to_path)
@@ -85,7 +84,6 @@ def test_path(path):
         send_error(path,1,1)
 
 
-WinDebug=False
 #-------------------------------------------------------------
 # Path needed on server for this script to work
 #-------------------------------------------------------------
@@ -104,7 +102,6 @@ MantidDir = '/opt/Mantid'
 MapMaskDir = '/usr/local/mprogs/InstrumentFiles/'
 #MapMaskDir = '/usr/local/mprogs/InstrumentFiles/'
 UserScriptRepoDir = '/opt/UserScripts'
-Paraview = '/usr/bin/paraview'
 
 #Win Debug
 if WinDebug:
@@ -141,11 +138,6 @@ json_data = open(ExpDescriptorsFile)
 data = json.load(json_data)
 
 
-
-
-user_list = {}
-
-#print len(data["experiments"])
 for experiment in range(len(data["experiments"])):
 
     #RB number for the experiment
@@ -174,9 +166,18 @@ for experiment in range(len(data["experiments"])):
         rbdir = r'd:\users\abuts\SVN\Mantid\Mantid_testing\tt'
         cycle_dir1 = r'd:\users\abuts\SVN\Mantid\Mantid_testing'
     else:
-        #Make a group
-        os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
-        os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
+        try:
+            group_descriptor = grp.getgrgid(nrbnumber)
+            # we assume that if group already exist, all folders below exist
+            group_members = group_descriptor[3]
+            # let's check if autoreduction is already a member
+            # as the script below worked appropriately before
+            if 'isisautoreduce' in group_members:
+                continue
+        except KeyError:
+            #Make a group
+            os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
+            os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
         rbdir = analysisDir + instrument.upper() + "/" + cycle + "/" + rbnumber
 
         #Make the paths to the analysis RB directories.
@@ -190,32 +191,12 @@ for experiment in range(len(data["experiments"])):
 
     mkpath(rbdir)
     test_path(rbdir)
-    if not WinDebug:
-        #Change permissions on the RB directories.
-        os.system("chgrp " + rbnumber + " " + rbdir)
-        os.system("chmod 2770 " + rbdir)
+    if WinDebug:
+        continue
+    #Change permissions on the RB directories.
+    os.system("chgrp " + rbnumber + " " + rbdir)
+    os.system("chmod 2770 " + rbdir)
 
-
-    for permission in range(len(data["experiments"][experiment]["Permissions"])):
-        email = data["experiments"][experiment]["Permissions"][permission]["email"]
-        fedid = data["experiments"][experiment]["Permissions"][permission]["fedid"]
-
-        if WinDebug:
-            user_folder = os.path.join(rootDir,str(fedid))
-            mkpath(user_folder)
-        else:
- #           if os.system("su -l -c 'exit' " + fedid) != 0:
-            if os.system("adquery user " + fedid) != 0:
-                user_error=fedid + " User cannot be found - account is either disabled or does not exist."
-                send_error(user_error,3,0)
-            else:
-                print fedid + " OK"
-                if os.path.exists("/home/"+fedid):
-                    os.system("chown -R " + fedid + "." + fedid + " " + "/home/"+fedid)
-                    os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-
+    os.system("/usr/sbin/usermod -a -G " + rbnumber + " isisautoreduce")
 
 json_data.close()
-
-
-
