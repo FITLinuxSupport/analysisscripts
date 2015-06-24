@@ -63,6 +63,18 @@ def send_error(MessBody=None,ErrorCode=0,ExitScript=0):
 
     if ErrorCode == 1:
         sys.exit()
+#
+def check_or_create_rb_link(fedid,rbdir,rbnumber):
+    """Function checks if  link to RB folder exist for the user
+       and if not creates one"""
+
+    #os.system("chown -R " + fedid + "." + fedid + " " + "/home/"+fedid)
+    if os.path.exists("/home/" + fedid + "/" + rbnumber):
+        print "Link exists: " + "/home/" + fedid + "/" + rbnumber
+        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
+    else:
+       os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
+       os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
 
   
 def test_path(path):
@@ -236,28 +248,14 @@ for experiment in range(len(data["experiments"])):
             else:
                 print fedid + " OK"
                 if os.path.exists("/home/"+fedid):
-                    os.system("chown -R " + fedid + "." + fedid + " " + "/home/"+fedid)
-                    if os.path.exists("/home/" + fedid + "/" + rbnumber):
-                        print "Link exists: " + "/home/" + fedid + "/" + rbnumber
-                        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-                    else:
-                        os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
-                        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
+                    check_or_create_rb_link(fedid,rbdir,rbnumber)
                 else:
+                    # Create user's folder
                     mkpath(home + "/" + fedid)
                     test_path(home  + "/" + fedid)
                     os.system("chown -R " + fedid + "." + fedid + " " + home +"/"+fedid)
-                    if os.path.exists("/home/"+fedid):
-                        if os.path.exists("/home/" + fedid + "/" + rbnumber):
-                            print "Link  exists: " + "/home/" + fedid + "/" + rbnumber
-                            os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-                        else:
-                            os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
-                            os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-                    else:
-                        os.symlink(home +"/"+fedid,"/home/"+fedid)
-                        os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
-                        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
+                    #--------------
+                    check_or_create_rb_link(fedid,rbdir,rbnumber)
                     
         if not buildISISDirectConfig:
             continue

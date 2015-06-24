@@ -10,6 +10,7 @@ import sys
 import collections
 import platform
 import stat
+import time
 
 from email.mime.text import MIMEText
 
@@ -64,7 +65,17 @@ def send_error(MessBody=None,ErrorCode=0,ExitScript=0):
     if ErrorCode == 1:
         sys.exit()
 
-  
+def check_or_create_rb_link(fedid,rbdir,rbnumber):
+    """Function checks if  link to RB folder exist for the user
+       and if not creates one"""
+    #os.system("chown -R " + fedid + "." + fedid + " " + "/home/"+fedid)
+    if os.path.exists("/home/" + fedid + "/" + rbnumber):
+        print "Link exists: " + "/home/" + fedid + "/" + rbnumber
+        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
+    else:
+       os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
+       os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
+
 def test_path(path):
     if os.path.exists(path):
         print "Path OK " + path
@@ -160,7 +171,12 @@ if buildISISDirectConfig:
 
 
 user_list = {}
-
+loop_start_time = time.time()
+group_creation_t = []
+samba_creatrion_t = []
+user_check_t = []
+link_create_t = []
+user_create_folder_t = []
 #print len(data["experiments"])
 for experiment in range(len(data["experiments"])):
 
@@ -187,6 +203,7 @@ for experiment in range(len(data["experiments"])):
 
     if not WinDebug:
         #Make a group
+        group_start=time.time()
         os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
         os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
         rbdir = os.path.join(analysisDir,instrument.upper(),cycle,rbnumber)
@@ -199,7 +216,7 @@ for experiment in range(len(data["experiments"])):
         #Change permissions on the RB directories.
         os.system("chgrp " + rbnumber + " " + rbdir)
         os.system("chmod 2770 " + rbdir)
-
+        group_end=time.time()
         # Make SAMBA share available to group members.
         # Make the string to append to the smb.conf file:
         SAMBARB = "        " + "[" + rbnumber + "]" + "\n"
@@ -214,7 +231,11 @@ for experiment in range(len(data["experiments"])):
         SAMBARB = SAMBARB + "        " + "directory mask = 2770" + "\n" + "\n"
         # Append the string to the smb.conf file:
         smb.write(SAMBARB)
+        samba_end = time.time()
+        group_creation_t.append(group_end-group_start)
+        samba_creatrion_t.append(samba_end - group_end)
 
+    all_users_t_start = samba_end
     for permission in range(len(data["experiments"][experiment]["Permissions"])):
         email = data["experiments"][experiment]["Permissions"][permission]["email"]
         fedid = data["experiments"][experiment]["Permissions"][permission]["fedid"]
@@ -225,40 +246,38 @@ for experiment in range(len(data["experiments"])):
             user_folder = os.path.join(rootDir,str(fedid))
             mkpath(user_folder)
             # for testing purposes we will create rb folders within users folder
-            # and would not deal with likning these folders
+            # and would not deal with linking these folders
             rbdir = os.path.join(user_folder,rbnumber)
             mkpath(rbdir)
         else:
+            user_t_start = time.time()
             if os.system("su -l -c 'exit' " + fedid) != 0:
                 user_error=fedid + " User cannot be found - account is either disabled or does not exist."
                 send_error(user_error,3,0)
+                user_t_ok = time.time()
                 continue
             else:
+                user_t_ok = time.time()
+                user_t_create_folder = user_t_ok
                 print fedid + " OK"
                 if os.path.exists("/home/"+fedid):
-                    os.system("chown -R " + fedid + "." + fedid + " " + "/home/"+fedid)
-                    if os.path.exists("/home/" + fedid + "/" + rbnumber):
-                        print "Link exists: " + "/home/" + fedid + "/" + rbnumber
-                        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-                    else:
-                        os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
-                        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
+                    check_or_create_rb_link(fedid,rbdir,rbnumber)
+                    user_t_rb_link=time.time()
                 else:
+                    # Create user's folder
                     mkpath(home + "/" + fedid)
                     test_path(home  + "/" + fedid)
                     os.system("chown -R " + fedid + "." + fedid + " " + home +"/"+fedid)
-                    if os.path.exists("/home/"+fedid):
-                        if os.path.exists("/home/" + fedid + "/" + rbnumber):
-                            print "Link  exists: " + "/home/" + fedid + "/" + rbnumber
-                            os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-                        else:
-                            os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
-                            os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-                    else:
-                        os.symlink(home +"/"+fedid,"/home/"+fedid)
-                        os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
-                        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-                    
+                    user_t_create_folder = time.time()
+                    #
+                    user_t_ok = user_t_create_folder
+                    check_or_create_rb_link(fedid,rbdir,rbnumber)
+                    user_t_rb_link=time.time()
+                #
+                user_check_t.append(user_t_ok-user_t_start)
+                user_create_folder_t.append(user_t_create_folder-user_t_ok)
+                link_create_t.append(user_t_rb_link-user_t_ok)
+
         if not buildISISDirectConfig:
             continue
         # Define Direct inelastic User
@@ -272,6 +291,27 @@ for experiment in range(len(data["experiments"])):
             # rb folder must be present!
             current_user.set_user_properties(str(instrument),str(date),str(cycle),rb_user_folder)
         #end if
+loop_end_time = time.time()
+
+group_cr_t_sum = 0
+samba_cr_t_sum = 0
+for ind, tt in enumerate(group_creation_t):
+    group_cr_t_sum+=tt
+    samba_cr_t_sum+=samba_creatrion_t[ind]
+
+user_check_t_sum=0
+link_create_t_sum=0
+user_create_folder_t_sum = 0
+for ind, tt in enumerate(user_check_t):
+    user_check_t_sum +=tt
+    link_create_t_sum+=link_create_t[ind]
+    user_create_folder_t_sum +=user_create_folder_t[ind]
+print "***************************************************************"
+print "Script execution time:",loop_end_time-loop_start_time
+print "Group creation nd samba creation time:",group_cr_t_sum,samba_cr_t_sum
+print "User check, user create and user filder creation: ",user_check_t_sum,link_create_t_sum,user_create_folder_t_sum
+print "***************************************************************"
+
 json_data.close()
 if not WinDebug:
     smb.close()
