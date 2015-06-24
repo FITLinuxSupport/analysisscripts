@@ -172,6 +172,7 @@ if buildISISDirectConfig:
 
 user_list = {}
 user_verified_list = []
+users_rejected_list = []
 #print len(data["experiments"])
 for experiment in range(len(data["experiments"])):
 
@@ -230,6 +231,9 @@ for experiment in range(len(data["experiments"])):
         email = data["experiments"][experiment]["Permissions"][permission]["email"]
         fedid = data["experiments"][experiment]["Permissions"][permission]["fedid"]
 
+        if fedid in users_rejected_list:
+            continue
+
         if WinDebug:
             # Create user for testing purpose. In real life it is created
             # somewhere else.
@@ -243,6 +247,7 @@ for experiment in range(len(data["experiments"])):
             if not fedid in user_verified_list:
                 if os.system("su -l -c 'exit' " + fedid) != 0:
                     user_error=fedid + " User cannot be found - account is either disabled or does not exist."
+                    users_rejected_list.append(fedid)
                     send_error(user_error,3,0)
                     continue
                 else:
