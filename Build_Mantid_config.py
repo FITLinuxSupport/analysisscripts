@@ -50,7 +50,7 @@ def send_error(MessBody=None,ErrorCode=0,ExitScript=0):
     if ErrorCode == 1:
         sub = 'CRITICAL ' + MessBody + " missing."
         msg = 'CRITICAL ERROR ' + MessBody + " missing. Cannot continue to make directories on "
-        msg = msg + socket.gethostname() + " aborting script"       
+        msg = msg + socket.gethostname() + " aborting script"
     elif ErrorCode == 2:
         sub = 'CRITICAL ' + MessBody + " Mantid init missing."
         msg = 'CRITICAL ERROR ' + MessBody + " while building Mantid configuration. Cannot continue to set up Mantid"
@@ -69,18 +69,22 @@ def send_error(MessBody=None,ErrorCode=0,ExitScript=0):
     if ErrorCode == 1:
         sys.exit()
 #
-def check_or_create_rb_link(fedid,rbdir,rbnumber):
+def check_or_create_rb_link(fedid,rbdir,rbnumber,create_group=True):
     """Function checks if  link to RB folder exist for the user
        and if not creates one"""
 
     #os.system("chown -R " + fedid + "." + fedid + " " + "/home/"+fedid)
     # Add user to the appropriate group
-    os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
+    if create_group:
+        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
     # Create link to appropriate RB folder.
     if os.path.exists("/home/" + fedid + "/" + rbnumber):
         print "Link exists: " + "/home/" + fedid + "/" + rbnumber
+        link_created = False
     else:
-       os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
+        os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
+        link_created = True
+    return link_created
 
 
 def test_path(path):
@@ -263,6 +267,7 @@ for experiment in data["experiments"]:
             # and would not deal with linking these folders
             rbdir = os.path.join(user_folder,rbnumber)
             mkpath(rbdir)
+            old_link_exist = False
         else:
             if not fedid in user_verified_list:
                 if os.system("su -l -c 'exit' " + fedid) != 0:
@@ -273,22 +278,23 @@ for experiment in data["experiments"]:
                 else:
                    user_verified_list.append(fedid)
             print fedid + " OK"
-            # if person is already in this group --
-            #everything has been created for him/her.
-            # Do nothing with this user and this cycle
+            # Check if person is already in this group
             if fedid in group_members:
-                continue
+                add_to_group = False
+            else:
+                add_to_group = True
             #
             if os.path.exists("/home/"+fedid):
-                check_or_create_rb_link(fedid,rbdir,rbnumber)
+                old_link_exist=check_or_create_rb_link(fedid,rbdir,rbnumber,add_to_group)
             else:
                 # Create user's folder
                 mkpath(home + "/" + fedid)
                 test_path(home  + "/" + fedid)
-                os.system("chown -R " + fedid + "." + fedid + " " + home +"/"+fedid)
+                os.system("chown -R " + fedid + "." + fedid + " " + home +"/"+fedid,add_to_group)
                 #--------------
-                check_or_create_rb_link(fedid,rbdir,rbnumber)
-                    
+                old_link_exist=check_or_create_rb_link(fedid,rbdir,rbnumber)
+        if old_link_exist:
+            continue
         if not buildISISDirectConfig:
             continue
         # Define Direct inelastic User
