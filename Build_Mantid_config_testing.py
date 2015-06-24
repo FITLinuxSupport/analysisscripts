@@ -315,8 +315,8 @@ for ind, tt in enumerate(user_check_t):
     user_create_folder_t_sum +=user_create_folder_t[ind]
 print "***************************************************************"
 print "Script execution time:",loop_end_time-loop_start_time
-print "Group creation nd samba creation time:",group_cr_t_sum,samba_cr_t_sum
-print "User check, user create and user filder creation: ",user_check_t_sum,link_create_t_sum,user_create_folder_t_sum
+print "Group creation and samba creation time:",group_cr_t_sum,samba_cr_t_sum
+print "User check, user create and user folder creation: ",user_check_t_sum,link_create_t_sum,user_create_folder_t_sum
 print "***************************************************************"
 
 json_data.close()
