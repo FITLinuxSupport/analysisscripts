@@ -112,21 +112,6 @@ if WinDebug:
     UserScriptRepoDir = r"D:\users\abuts\SVN\Mantid\scriptrepository_mantid/"
     MapMaskDir =  r'D:\users\abuts\SVN\ISIS\InstrumentFiles_svn/'
     Paraview = r"c:\Programming\Paraview_Installed"
-#else:
-#    san1 = "/san1"
-#    test_path(san1)
-#    san2 = "/san2"
-#    test_path(san2)
-#    san3 = "/san3"
-#    test_path(san3)
-#    san4 = "/san4"
-#    test_path(san4)
-#    san5 = "/san5"
-#    test_path(san5)
-#    san6 = "/san6"
-#    test_path(san6)
-
-#    san = san6
 
 #admin = libuser.admin()
 
@@ -227,22 +212,8 @@ for experiment in range(len(data["experiments"])):
                 print fedid + " OK"
                 if os.path.exists("/home/"+fedid):
                     os.system("chown -R " + fedid + "." + fedid + " " + "/home/"+fedid)
-                    if os.path.exists("/home/" + fedid + "/" + rbnumber):
-                        print "Link exists: " + "/home/" + fedid + "/" + rbnumber
-                        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-                    else:
-                        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-                        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-                else:
-                    if os.path.exists("/home/"+fedid):
-                        if os.path.exists("/home/" + fedid + "/" + rbnumber):
-                            print "Link exists: " + "/home/" + fedid + "/" + rbnumber
-                            os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-                        else:
-                            os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-                    else:
-                            os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-                    
+                    os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
+
 
 json_data.close()
 
