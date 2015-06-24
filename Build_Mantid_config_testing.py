@@ -219,8 +219,8 @@ for experiment in data["experiments"]:
             group_members = group_descriptor[3]
         except KeyError:
             #Make new empty group
-        	os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
-	        os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
+            os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
+	    os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
             group_members=[]
         rbdir = os.path.join(analysisDir,instrument.upper(),cycle,rbnumber)
 
