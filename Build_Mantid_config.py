@@ -44,7 +44,7 @@ def send_alert_email(from_address,to_address, subject, message):
     s.quit()
 
 #sysadmin_email = "stephen.rankin@stfc.ac.uk,warren.jeffs@stfc.ac.uk,leon.nell@stfc.ac.uk"
-sysadmin_email = ["warren.jeffs@stfc.ac.uk", "leon.nell@stfc.ac.uk"]
+sysadmin_email = ["warren.jeffs@stfc.ac.uk", "leon.nell@stfc.ac.uk", "darren.gilbert@stfc.ac.uk"]
 
 def send_error(MessBody=None,ErrorCode=0,ExitScript=0):
     if ErrorCode == 1:
