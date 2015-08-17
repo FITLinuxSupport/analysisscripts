@@ -1,6 +1,4 @@
 if [ ! -f  ~/Desktop/HoraceExampleScripts];
 then
     ln -s /home/resources/HoraceExampleScripts/ ~/Desktop/HoraceExampleScripts
-else
-    continue
-fi
+fi	
