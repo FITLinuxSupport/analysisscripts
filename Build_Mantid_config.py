@@ -82,7 +82,7 @@ def check_or_create_rb_link(fedid,rbdir,rbnumber,create_group=True):
         print "Link exists: " + "/home/" + fedid + "/" + rbnumber
         link_created = False
     else:
-        os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber)
+        os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber) 
         link_created = True
     return link_created
 
@@ -224,7 +224,10 @@ for experiment in data["experiments"]:
             os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
             os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
             group_members=[]
-        rbdir = os.path.join(analysisDir,instrument.upper(),cycle,rbnumber)
+        cyclerbdir = os.path.join(analysisDir,instrument.upper(),cycle, rbnumber)
+        rbdir = os.path.join(analysisDir,instrument.upper(),"RBNumber",rbnumber)
+        cycledir = os.path.join(analysisDir,instrument.upper(),cycle)
+        #so should be analysisdir/instrumentname/RBNumber/rbnumber
 
         #Make the paths to the analysis RB directories.
 
@@ -235,6 +238,21 @@ for experiment in data["experiments"]:
         os.system("chgrp " + rbnumber + " " + rbdir)
         os.system("chmod 2770 " + rbdir)
 
+        #make cycle folder
+        if os.path.exists(cycledir):
+            print "Path OK: " +cycledir+ "\n"
+        else:
+            mkpath(cycledir)
+
+
+        #make symb links from cycle -> individual RBs
+        if os.path.exists(cyclerbdir):
+            print "Link exists: " +cyclerbdir+ "\n"
+        else:
+            os.symlink(rbdir, cyclerbdir +rbnumber) 
+        
+        
+        
         # Make SAMBA share available to group members.
         # Make the string to append to the smb.conf file:
         SAMBARB = "        " + "[" + rbnumber + "]" + "\n"
@@ -324,4 +342,5 @@ if buildISISDirectConfig:
             mcf.generate_config()
         except RuntimeError as er:
             send_error(er.message,2,1)
+
 
