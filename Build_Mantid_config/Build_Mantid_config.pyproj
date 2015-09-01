@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>8c7fe82f-dedc-45a7-b287-2fec77e9d53a</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>d:\Data\MantidDevArea\analyssiscripts\Build_Mantid_config.py</StartupFile>
+    <StartupFile>d:\users\abuts\SVN\ISIS_analysisscripts\Build_Mantid_config.py</StartupFile>
     <SearchPath>c:/Mantid/Code/builds/br_master/bin/Release;c:\Mantid\Code\Mantid\scripts\test;C:\Mantid\Code\Third_Party\lib\win64;c:\Mantid\Code\Mantid\scripts\Inelastic</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -24,5 +24,10 @@
     <DebugSymbols>true</DebugSymbols>
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
+  </PropertyGroup>
+  <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
 </Project>

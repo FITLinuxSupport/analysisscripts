@@ -1,4 +1,4 @@
-#!/usr/bin/python
+﻿#!/usr/bin/python
 import json
 #import libuser
 import urllib
@@ -224,7 +224,7 @@ for experiment in data["experiments"]:
         except KeyError:
             #Make new empty group
             os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
-	    os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
+            os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
             group_members=[]
         rbdir = os.path.join(analysisDir,instrument.upper(),cycle,rbnumber)
 

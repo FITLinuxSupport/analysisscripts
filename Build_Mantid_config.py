@@ -1,4 +1,4 @@
-#!/usr/bin/python
+﻿#!/usr/bin/python
 import json
 #import libuser
 import urllib
@@ -10,6 +10,7 @@ import sys
 import collections
 import platform
 import stat
+import subprocess
 try:
     import grp
     WinDebug=False
@@ -42,6 +43,15 @@ def send_alert_email(from_address,to_address, subject, message):
     s = smtplib.SMTP(smtp_server)
     s.sendmail(from_address, to_address, msg.as_string())
     s.quit()
+#
+def demote(user_uid, user_gid):
+    """Lower the execution privileges of a subprocess
+       from root to a user
+    """
+    def result():
+        os.setgid(user_gid)
+        os.setuid(user_uid)
+    return result
 
 #sysadmin_email = "stephen.rankin@stfc.ac.uk,warren.jeffs@stfc.ac.uk,leon.nell@stfc.ac.uk"
 sysadmin_email = ["warren.jeffs@stfc.ac.uk", "leon.nell@stfc.ac.uk", "darren.gilbert@stfc.ac.uk"]
@@ -318,7 +328,7 @@ for experiment in data["experiments"]:
         # Define Direct inelastic User
         if mcf.is_inelastic(instrument):
             if not fedid in user_list:
-                user_list[str(fedid)] = UserProperties()
+                user_list[str(fedid)] = UserProperties(str(fedid))
             current_user = user_list[fedid]
             # Define user's properties, e.g. cycle, instrument, start data 
             # and rb folder. If more then one record per user, the latest will be active
