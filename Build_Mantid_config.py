@@ -1,4 +1,4 @@
-#!/usr/bin/python
+﻿#!/usr/bin/python
 import json
 #import libuser
 import urllib
@@ -42,6 +42,7 @@ def send_alert_email(from_address,to_address, subject, message):
     s = smtplib.SMTP(smtp_server)
     s.sendmail(from_address, to_address, msg.as_string())
     s.quit()
+#
 
 #sysadmin_email = "stephen.rankin@stfc.ac.uk,warren.jeffs@stfc.ac.uk,leon.nell@stfc.ac.uk"
 sysadmin_email = ["warren.jeffs@stfc.ac.uk", "leon.nell@stfc.ac.uk", "darren.gilbert@stfc.ac.uk"]
@@ -188,9 +189,6 @@ users_rejected_list = []
 
 
 
-
-
-
 #print len(data["experiments"])
 for experiment in data["experiments"]:
 
@@ -318,7 +316,7 @@ for experiment in data["experiments"]:
         # Define Direct inelastic User
         if mcf.is_inelastic(instrument):
             if not fedid in user_list:
-                user_list[str(fedid)] = UserProperties()
+                user_list[str(fedid)] = UserProperties(str(fedid))
             current_user = user_list[fedid]
             # Define user's properties, e.g. cycle, instrument, start data 
             # and rb folder. If more then one record per user, the latest will be active
@@ -329,6 +327,8 @@ for experiment in data["experiments"]:
 json_data.close()
 if not WinDebug:
     smb.close()
+
+
 # Usually user's configuration file is not overwritten if its modification date is late then
 # user start date. Set below to True if you want to force overwriting configurations
 #mcf._force_change_config = True
@@ -336,9 +336,9 @@ if not WinDebug:
 #mcf._force_change_script = True
 if buildISISDirectConfig:
     # Generate Mantid configurations for all users who does not yet have their own
-    for fedid,user_prop in user_list.iteritems():
+    for user_prop in user_list.itervalues():
         try:
-            mcf.init_user(fedid,user_prop)
+            mcf.init_user(user_prop)
             mcf.generate_config()
         except RuntimeError as er:
             send_error(er.message,2,1)
