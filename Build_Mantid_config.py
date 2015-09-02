@@ -92,6 +92,7 @@ def test_path(path):
     if os.path.exists(path):
         print "Path OK " + path
     else:
+	print "Fatal error in path: ",path
         send_error(path,1,1)
 #-------------------------------------------------------------
 # Server specific part with hard-coded path-es
@@ -100,14 +101,16 @@ if platform.system() == 'Windows':
     sys.path.insert(0,'c:/Mantid/Code/Mantid/scripts/Inelastic/Direct')
     WinDebug=True
 else:
-    sys.path.insert(0,'/opt/mantidnightly/scripts/Inelastic/Direct/')
-    #sys.path.insert(0,'/opt/Mantid/scripts/Inelastic/Direct/')
+    #sys.path.insert(0,'/opt/mantidnightly/scripts/Inelastic/Direct/')
+    sys.path.insert(0,'/opt/Mantid/scripts/Inelastic/Direct/')
     WinDebug=False
 
 try:
     from ISISDirecInelasticConfig import MantidConfigDirectInelastic,UserProperties
     buildISISDirectConfig=True
-except:
+    print "Importing ISIS Inelastic Configuration script"
+except Exception:
+    print "Failed to import ISIS Inelastic Configuration script: ",sys.exc_info()[0]
     buildISISDirectConfig=False
 
 #
@@ -176,9 +179,11 @@ if not WinDebug:
 if buildISISDirectConfig:
     try:
         mcf = MantidConfigDirectInelastic(MantidDir,rootDir,UserScriptRepoDir,MapMaskDir)
+        print "Successfullu initialized ISIS Inelastic Configuration script generator"
     except RuntimeError as er:
         send_error(er.message,2,1)
         buildISISDirectConfig=False
+        print "Faild to initialize ISIS Inelastic Configuration script generator"
         #raise RuntimeError(" Server does not have appropriate folders for DirectInelastic reduction. Can not continue")
 
 
@@ -247,7 +252,7 @@ for experiment in data["experiments"]:
         if os.path.exists(cyclerbdir):
             print "Link exists: " +cyclerbdir+ "\n"
         else:
-            os.symlink(rbdir, cyclerbdir +rbnumber) 
+            os.symlink(rbdir, cyclerbdir) 
         
         
         
