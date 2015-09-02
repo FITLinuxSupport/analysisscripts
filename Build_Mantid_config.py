@@ -306,16 +306,16 @@ for experiment in data["experiments"]:
                 add_to_group = True
             #
             if os.path.exists("/home/"+fedid):
-                old_link_exist=check_or_create_rb_link(fedid,rbdir,rbnumber,add_to_group)
+                old_link_exists=check_or_create_rb_link(fedid,rbdir,rbnumber,add_to_group)
             else:
                 # Create user's folder
                 mkpath(home + "/" + fedid)
                 test_path(home  + "/" + fedid)
                 os.system("chown -R " + fedid + "." + fedid + " " + home +"/"+fedid,add_to_group)
                 #--------------
-                old_link_exist=check_or_create_rb_link(fedid,rbdir,rbnumber)
-        if old_link_exist:
-            continue
+                old_link_exists=check_or_create_rb_link(fedid,rbdir,rbnumber)
+        #if old_link_exists:
+        #    continue
         if not buildISISDirectConfig:
             continue
         # Define Direct inelastic User
