@@ -1,5 +1,3 @@
-
-
 #!/bin/bash
 #
 # Should run hourly form cron as root to update
