@@ -2,6 +2,9 @@
 
 #!/bin/bash
 #
+# Should run hourly form cron as root to update
+# user script repositories and users insrument files
+# on at least one analysis machines connected to CEPS
 cd /opt/UserScripts/
 git pull
 cd /usr/local/mprogs/InstrumentFiles/
