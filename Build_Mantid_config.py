@@ -163,7 +163,7 @@ else:
     ExpDescriptorsFile = "/tmp/excitations.txt"
 
 # Get the user office data.
-urllib.urlretrieve("http://icatingest.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile)
+urllib.urlretrieve("http://icatingest2.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile)
 #urllib.urlretrieve("http://fitlnxdeploy.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile+'.old')
 test_path(ExpDescriptorsFile)
 

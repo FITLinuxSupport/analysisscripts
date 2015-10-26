@@ -131,7 +131,7 @@ else:
     ExpDescriptorsFile = "/tmp/excitations.txt"
 
 # Get the user office data.
-urllib.urlretrieve("http://icatingest.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile)
+urllib.urlretrieve("http://icatingest2.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile)
 test_path(ExpDescriptorsFile)
 
 #Open the data
