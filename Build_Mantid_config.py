@@ -1,4 +1,4 @@
-#!/usr/bin/python
+﻿#!/usr/bin/python
 import json
 #import libuser
 import urllib
@@ -69,36 +69,18 @@ def send_error(MessBody=None,ErrorCode=0,ExitScript=0):
 
     if ErrorCode == 1:
         sys.exit()
-#
-def check_or_create_rb_link(fedid,rbdir,rbnumber,create_group=True):
-    """Function checks if  link to RB folder exist for the user
-       and if not creates one"""
-
-    #os.system("chown -R " + fedid + "." + fedid + " " + "/home/"+fedid)
-    # Add user to the appropriate group
-    if create_group:
-        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-    # Create link to appropriate RB folder.
-    if os.path.exists("/home/" + fedid + "/" + rbnumber):
-        print "Link exists: " + "/home/" + fedid + "/" + rbnumber
-        link_created = False
-    else:
-        os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber) 
-        link_created = True
-    return link_created
-
 
 def test_path(path):
     if os.path.exists(path):
         print "Path OK " + path
     else:
-	print "Fatal error in path: ",path
+        print "Fatal error in path: ",path
         send_error(path,1,1)
 #-------------------------------------------------------------
 # Server specific part with hard-coded path-es
 #-------------------------------------------------------------
 if platform.system() == 'Windows':
-    sys.path.insert(0,'c:/Mantid/Code/Mantid/scripts/Inelastic/Direct')
+    sys.path.insert(0,'c:/Mantid/scripts/Inelastic/Direct')
     WinDebug=True
 else:
     #sys.path.insert(0,'/opt/mantidnightly/scripts/Inelastic/Direct/')
@@ -134,14 +116,13 @@ UserScriptRepoDir = '/opt/UserScripts'
 
 #Win Debug
 if WinDebug:
-    MantidDir = r"c:\Mantid\Code\builds\br_master\bin\Release"
+    MantidDir = r"c:\Mantid\_builds\br_master\bin\Release"
     UserScriptRepoDir = os.path.join(analysisDir,"UserScripts")
     MapMaskDir =  os.path.join(analysisDir,"InstrumentFiles")
 else:
     home = '/home'
 
-
-
+#
 
 #admin = libuser.admin()
 
@@ -179,12 +160,28 @@ if not WinDebug:
 if buildISISDirectConfig:
     try:
         mcf = MantidConfigDirectInelastic(MantidDir,rootDir,UserScriptRepoDir,MapMaskDir)
-        print "Successfullu initialized ISIS Inelastic Configuration script generator"
+        print "Successfully initialized ISIS Inelastic Configuration script generator"
     except RuntimeError as er:
         send_error(er.message,2,1)
         buildISISDirectConfig=False
-        print "Faild to initialize ISIS Inelastic Configuration script generator"
+        print "Failed to initialize ISIS Inelastic Configuration script generator"
         #raise RuntimeError(" Server does not have appropriate folders for DirectInelastic reduction. Can not continue")
+
+def check_or_create_rb_link(fedid,rbdir,rbnumber,create_group=True):
+    """Function checks if  link to RB folder exist for the user
+       and if not creates one"""
+
+    # Add user to the appropriate group
+    if create_group:
+        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
+    # Create link to appropriate RB folder.
+    if os.path.exists("/home/" + fedid + "/" + rbnumber):
+        print "Link exists: " + "/home/" + fedid + "/" + rbnumber
+        link_created = False
+    else:
+        os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber) 
+        link_created = True
+    return link_created
 
 
 user_list = {}
@@ -279,10 +276,11 @@ for experiment in data["experiments"]:
         if fedid in users_rejected_list:
             continue
 
+        user_folder = os.path.join(rootDir,str(fedid))
         if WinDebug:
             # Create user for testing purpose. In real life it is created
             # somewhere else.
-            user_folder = os.path.join(rootDir,str(fedid))
+
             mkpath(user_folder)
             # for testing purposes we will create rb folders within users folder
             # and would not deal with linking these folders
@@ -305,12 +303,12 @@ for experiment in data["experiments"]:
             else:
                 add_to_group = True
             #
-            if os.path.exists("/home/"+fedid):
+            if os.path.exists(user_folder):
                 old_link_exists=check_or_create_rb_link(fedid,rbdir,rbnumber,add_to_group)
             else:
                 # Create user's folder
-                mkpath(home + "/" + fedid)
-                test_path(home  + "/" + fedid)
+                mkpath(user_folder)
+                test_path(user_folder)
                 os.system("chown -R " + fedid + "." + fedid + " " + home +"/"+fedid,add_to_group)
                 #--------------
                 old_link_exists=check_or_create_rb_link(fedid,rbdir,rbnumber)
@@ -345,7 +343,7 @@ if buildISISDirectConfig:
         try:
             mcf.init_user(user_prop)
             mcf.generate_config()
-        except RuntimeError as er:
+        except (RuntimeError,AttributeError) as er:
             send_error(er.message,2,1)
 
 
