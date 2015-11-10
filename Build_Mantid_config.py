@@ -12,14 +12,56 @@ import platform
 import stat
 try:
     import grp
-    WinDebug=False
 except:
-    WinDebug = True
+    pass # its probably windows
 
 from email.mime.text import MIMEText
 
 from pprint import pprint
 from distutils.dir_util import mkpath
+
+
+sysadmin_email = ["warren.jeffs@stfc.ac.uk", "leon.nell@stfc.ac.uk", "darren.gilbert@stfc.ac.uk"]
+# Setup web proxy
+proxies = {'http': 'http://wwwcache.rl.ac.uk:8080'}
+#--------------------------------------------------------------------
+# Server specific part with hard-coded path-es used in configuration
+#--------------------------------------------------------------------
+if platform.system() == 'Windows':
+    sys.path.insert(0,'c:/Mantid/scripts/Inelastic/Direct')
+    base = r'd:\Data\Mantid_Testing\config_script_test_folder'
+    analysisDir= os.path.join(base,"instrument")
+
+    MantidDir = r"c:\Mantid\_builds\br_master\bin\Release"
+    UserScriptRepoDir = os.path.join(base,"UserScripts")
+    MapMaskDir =  os.path.join(base ,"InstrumentFiles")
+
+    homeDir = os.path.join(base,'users')
+    # user office data location
+    ExpDescriptorsFile = "c:/temp/excitations.txt"
+
+
+    WinDebug = True
+else: # Unix
+    sys.path.insert(0,'/opt/Mantid/scripts/Inelastic/Direct/')
+    #sys.path.insert(0,'/opt/mantidnightly/scripts/Inelastic/Direct/')
+# On analysis machines:
+    MantidDir = '/opt/Mantid'
+    MapMaskDir = '/usr/local/mprogs/InstrumentFiles/'
+    UserScriptRepoDir = '/opt/UserScripts'
+    #
+    homeDir = "/home/"
+    test_path(homeDir)
+    #
+    analysisDir = "/instrument/"
+    test_path(analysisDir)
+
+    # user office data location
+    ExpDescriptorsFile = "/tmp/excitations.txt"
+    WinDebug = False
+#--------------------------------------------------------------------
+#  Routines definitions:
+#--------------------------------------------------------------------
 
 def getUidByUname(uname):
     return os.popen("id -u %s" % uname).read().strip()
@@ -43,10 +85,6 @@ def send_alert_email(from_address,to_address, subject, message):
     s.sendmail(from_address, to_address, msg.as_string())
     s.quit()
 #
-
-#sysadmin_email = "stephen.rankin@stfc.ac.uk,warren.jeffs@stfc.ac.uk,leon.nell@stfc.ac.uk"
-sysadmin_email = ["warren.jeffs@stfc.ac.uk", "leon.nell@stfc.ac.uk", "darren.gilbert@stfc.ac.uk"]
-
 def send_error(MessBody=None,ErrorCode=0,ExitScript=0):
     if ErrorCode == 1:
         sub = 'CRITICAL ' + MessBody + " missing."
@@ -76,48 +114,50 @@ def test_path(path):
     else:
         print "Fatal error in path: ",path
         send_error(path,1,1)
+#
+def check_or_create_rb_link(homeDir,fedid,sys_rbdir,rbnumberID,create_group=True):
+    """Function checks if  link to RB folder exist for the user
+       and if not creates one
+       Inputs:
+       homeDir    -- the folder where users are located (usually /home on unix)
+       fedid      -- user id in the system
+       sys_rbdir -- sys_rbdir physical locations of the RB folders with data in the system
+       rbnumberID  -- not a number but the name of rb proposan (includes RB prefix)
+       create_group -- if true, add user to group, if false do not
+    """
 
-#-------------------------------------------------------------
-# Server specific part with hard-coded path-es 
-#-------------------------------------------------------------
-if platform.system() == 'Windows':
-        sys.path.insert(0,'c:/Mantid/scripts/Inelastic/Direct')
-
-        base = 'd:/Data/Mantid_Testing/config_script_test_folder'
-        analysisDir= base
-
-        MantidDir = r"c:\Mantid\_builds\br_master\bin\Release"
-        UserScriptRepoDir = os.path.join(analysisDir,"UserScripts")
-        MapMaskDir =  os.path.join(analysisDir,"InstrumentFiles")
-
-        rootDir = os.path.join(base,'users')
-
-        WinDebug = True
-else:
-        sys.path.insert(0,'/opt/Mantid/scripts/Inelastic/Direct/')
-        #sys.path.insert(0,'/opt/mantidnightly/scripts/Inelastic/Direct/')
-
-# On analysis machines:
-        MantidDir = '/opt/Mantid'
-        MapMaskDir = '/usr/local/mprogs/InstrumentFiles/'
-        UserScriptRepoDir = '/opt/UserScripts'
-        #
-        rootDir = "/home/"
-        test_path(rootDir)
-        #
-        analysisDir = "/instrument/"
-        test_path(analysisDir)
-
-        home = '/home'
-
-        WinDebug = False
+    # Add user to the appropriate group
+    if create_group:
+        os.system("/usr/sbin/usermod -a -G {0} {1}".format(rbnumberID,fedid))
+    # Create link to appropriate RB folder.
+    user_rb_dir = os.path.join(homeDir,rbnumberID)
+    if os.path.exists(user_rb_dir):
+        print "Link exists: ",user_rb_dir
+        link_created = False
+    else:
+        if WinDebug:
+            os.system("mklink /j {0} {1}".format(user_rb_dir,sys_rbdir))
+        else:
+            os.symlink(sys_rbdir, user_rb_dir)
+        link_created = True
+    return link_created
+#--------------------------------------------------------------------
+#  END Routines definitions
+#--------------------------------------------------------------------
 
 
+# Try to initialize Mantid part to build ISIS direct inelastic configurations
 try:
     from ISISDirecInelasticConfig import MantidConfigDirectInelastic,UserProperties
     buildISISDirectConfig=True
-    print "Importing ISIS Inelastic Configuration script"
-except Exception:
+    try:
+        mcf = MantidConfigDirectInelastic(MantidDir,homeDir,UserScriptRepoDir,MapMaskDir)
+        print "Successfully initialized ISIS Inelastic Configuration script generator"
+    except RuntimeError as er:
+        send_error(er.message,2,1)
+        buildISISDirectConfig=False
+        print "Failed to initialize ISIS Inelastic Configuration script generator"
+except:
     print "Failed to import ISIS Inelastic Configuration script: ",sys.exc_info()[0]
     buildISISDirectConfig=False
 
@@ -133,15 +173,7 @@ except Exception:
 # Get the output from the user office data which is published
 # as a web page in JSON
 
-# Setup web proxy
-proxies = {'http': 'http://wwwcache.rl.ac.uk:8080'}
 opener = urllib.FancyURLopener(proxies)
-
-if WinDebug:
-    ExpDescriptorsFile = "c:/temp/excitations.txt"
-else:
-    ExpDescriptorsFile = "/tmp/excitations.txt"
-
 # Get the user office data.
 urllib.urlretrieve("http://icatingest2.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile)
 #urllib.urlretrieve("http://fitlnxdeploy.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile+'.old')
@@ -156,46 +188,18 @@ if not WinDebug:
     test_path("/etc/samba/smb.conf")
     os.system("cp -f /etc/samba/smb.tmpl /etc/samba/smb.conf")
     smb = open('/etc/samba/smb.conf', 'a')
-if buildISISDirectConfig:
-    try:
-        mcf = MantidConfigDirectInelastic(MantidDir,rootDir,UserScriptRepoDir,MapMaskDir)
-        print "Successfully initialized ISIS Inelastic Configuration script generator"
-    except RuntimeError as er:
-        send_error(er.message,2,1)
-        buildISISDirectConfig=False
-        print "Failed to initialize ISIS Inelastic Configuration script generator"
-        #raise RuntimeError(" Server does not have appropriate folders for DirectInelastic reduction. Can not continue")
-
-def check_or_create_rb_link(fedid,rbdir,rbnumber,create_group=True):
-    """Function checks if  link to RB folder exist for the user
-       and if not creates one"""
-
-    # Add user to the appropriate group
-    if create_group:
-        os.system("/usr/sbin/usermod -a -G " + rbnumber + " " + fedid)
-    # Create link to appropriate RB folder.
-    if os.path.exists("/home/" + fedid + "/" + rbnumber):
-        print "Link exists: " + "/home/" + fedid + "/" + rbnumber
-        link_created = False
-    else:
-        os.symlink(rbdir, "/home/" + fedid + "/" + rbnumber) 
-        link_created = True
-    return link_created
 
 
 user_list = {}
 user_verified_list = []
 users_rejected_list = []
 
-
-
-
 #print len(data["experiments"])
 for experiment in data["experiments"]:
 
     #RB number for the experiment
     nrbnumber  = experiment["RbNumber"]
-    rbnumber = "RB" + nrbnumber
+    rbnumberID = "RB" + nrbnumber
 
     #Experiment start date
     date = experiment["StartDate"]
@@ -208,7 +212,7 @@ for experiment in data["experiments"]:
     cycle = cycle.upper()
     cycle = "CYCLE" + cycle.replace('/', '')
 
-    #  print rbnumber
+    #  print rbnumberID
     #  print date
     #  print instrument
     #  print cycle
@@ -220,48 +224,53 @@ for experiment in data["experiments"]:
             group_members = group_descriptor[3]
         except KeyError:
             #Make new empty group
-            os.system("/usr/sbin/groupmod -o " "-g " +nrbnumber+ " " +rbnumber)
-            os.system("/usr/sbin/groupadd -o " "-g " +nrbnumber+ " " +rbnumber)
+            os.system("/usr/sbin/groupmod -o -g {0} {1}".format(nrbnumber,rbnumberID))
+            os.system("/usr/sbin/groupadd -o -g {0} {1}".format(nrbnumber,rbnumberID))
             group_members=[]
-        cyclerbdir = os.path.join(analysisDir,instrument.upper(),cycle, rbnumber)
-        rbdir = os.path.join(analysisDir,instrument.upper(),"RBNumber",rbnumber)
-        cycledir = os.path.join(analysisDir,instrument.upper(),cycle)
-        #so should be analysisdir/instrumentname/RBNumber/rbnumber
+    else:
+        group_members=[]
+    # Make generic cycle directories
+    cyclerbdir = os.path.join(analysisDir,instrument.upper(),cycle, rbnumberID)
+    main_rbData_dir = os.path.join(analysisDir,instrument.upper(),"RBNumber",rbnumberID)
+    cycledir = os.path.join(analysisDir,instrument.upper(),cycle)
+    #so should be analysisdir/instrumentname/RBNumber/rbnumberID
 
-        #Make the paths to the analysis RB directories.
+    #Make the paths to the analysis RB directories.
+    mkpath(main_rbData_dir)
+    test_path(main_rbData_dir)
 
-        mkpath(rbdir)
-        test_path(rbdir)
+    #Change permissions on the RB directories.
+    os.system("chgrp {0} {1}".format(rbnumberID,main_rbData_dir))
+    os.system("chmod -R 2770 {0}".format(main_rbData_dir))
 
-        #Change permissions on the RB directories.
-        os.system("chgrp " + rbnumber + " " + rbdir)
-        os.system("chmod 2770 " + rbdir)
+    #make cycle folder
+    if os.path.exists(cycledir):
+        print "Path OK: " +cycledir+ "\n"
+    else:
+        mkpath(cycledir)
 
-        #make cycle folder
-        if os.path.exists(cycledir):
-            print "Path OK: " +cycledir+ "\n"
+
+    #make symb links from cycle -> individual RBs
+    if os.path.exists(cyclerbdir):
+        print "Link exists: " +cyclerbdir+ "\n"
+    else:
+        if WinDebug:
+            os.system("mklink /j {0} {1}".format(cyclerbdir,main_rbData_dir))
         else:
-            mkpath(cycledir)
+            os.symlink(main_rbData_dir, cyclerbdir)
+    #End
 
-
-        #make symb links from cycle -> individual RBs
-        if os.path.exists(cyclerbdir):
-            print "Link exists: " +cyclerbdir+ "\n"
-        else:
-            os.symlink(rbdir, cyclerbdir) 
-        
-        
-        
+    if not WinDebug:
         # Make SAMBA share available to group members.
         # Make the string to append to the smb.conf file:
-        SAMBARB = "        " + "[" + rbnumber + "]" + "\n"
-        SAMBARB = SAMBARB + "        " + "comment = " + rbnumber + "\n"
-        SAMBARB = SAMBARB + "        " + "path = " + rbdir + "\n"
+        SAMBARB = "        " + "[" + rbnumberID + "]" + "\n"
+        SAMBARB = SAMBARB + "        " + "comment = " + rbnumberID + "\n"
+        SAMBARB = SAMBARB + "        " + "path = " + main_rbData_dir + "\n"
         SAMBARB = SAMBARB + "        " + "writable = yes" + "\n"
         SAMBARB = SAMBARB + "        " + "printable = no" + "\n"
-        SAMBARB = SAMBARB + "        " + "write list = +" + rbnumber + "\n"
-        SAMBARB = SAMBARB + "        " + "force group = " + rbnumber + "\n"
-        SAMBARB = SAMBARB + "        " + "valid users = +" + rbnumber + "\n"
+        SAMBARB = SAMBARB + "        " + "write list = +" + rbnumberID + "\n"
+        SAMBARB = SAMBARB + "        " + "force group = " + rbnumberID + "\n"
+        SAMBARB = SAMBARB + "        " + "valid users = +" + rbnumberID + "\n"
         SAMBARB = SAMBARB + "        " + "create mask = 2660" + "\n"
         SAMBARB = SAMBARB + "        " + "directory mask = 2770" + "\n" + "\n"
         # Append the string to the smb.conf file:
@@ -275,43 +284,34 @@ for experiment in data["experiments"]:
         if fedid in users_rejected_list:
             continue
 
-        user_folder = os.path.join(rootDir,str(fedid))
-        if WinDebug:
-            # Create user for testing purpose. In real life it is created
-            # somewhere else.
+        user_folder = os.path.join(homeDir,str(fedid))
 
-            mkpath(user_folder)
-            # for testing purposes we will create rb folders within users folder
-            # and would not deal with linking these folders
-            rbdir = os.path.join(user_folder,rbnumber)
-            mkpath(rbdir)
-            old_link_exist = False
+        if not fedid in user_verified_list:
+           if not WinDebug and os.system("su -l -c 'exit' " + fedid) != 0:
+                user_error=fedid + " User cannot be found - account is either disabled or does not exist."
+                users_rejected_list.append(fedid)
+                send_error(user_error,3,0)
+                continue
+           else:
+                user_verified_list.append(fedid)
+                print fedid + " OK"
+        # Check if person is already in this group
+        if fedid in group_members:
+            add_to_group = False
         else:
-            if not fedid in user_verified_list:
-                if os.system("su -l -c 'exit' " + fedid) != 0:
-                    user_error=fedid + " User cannot be found - account is either disabled or does not exist."
-                    users_rejected_list.append(fedid)
-                    send_error(user_error,3,0)
-                    continue
-                else:
-                   user_verified_list.append(fedid)
-            print fedid + " OK"
-            # Check if person is already in this group
-            if fedid in group_members:
-                add_to_group = False
-            else:
-                add_to_group = True
-            #
-            if os.path.exists(user_folder):
-                old_link_exists=check_or_create_rb_link(fedid,rbdir,rbnumber,add_to_group)
-            else:
-                # Create user's folder
-                mkpath(user_folder)
-                test_path(user_folder)
-                os.system("chown -R " + fedid + "." + fedid + " " + home +"/"+fedid,add_to_group)
-                #--------------
-                old_link_exists=check_or_create_rb_link(fedid,rbdir,rbnumber)
-        #if old_link_exists:
+            add_to_group = True
+        #
+        if os.path.exists(user_folder):
+            link_created=check_or_create_rb_link(user_folder,fedid,main_rbData_dir,rbnumberID,add_to_group)
+        else:
+            # Create user's folder
+            mkpath(user_folder)
+            test_path(user_folder)
+            os.system("chown -R {0}:{1} {2}".format(fedid,fedid,user_folder))
+            #--------------
+            link_created=check_or_create_rb_link(user_folder,fedid,main_rbData_dir,rbnumberID)
+        #end userExists
+        #if not old_link_exists:
         #    continue
         if not buildISISDirectConfig:
             continue
@@ -322,7 +322,7 @@ for experiment in data["experiments"]:
             current_user = user_list[fedid]
             # Define user's properties, e.g. cycle, instrument, start data 
             # and rb folder. If more then one record per user, the latest will be active
-            rb_user_folder = os.path.join(mcf._home_path,str(fedid),str(rbnumber))
+            rb_user_folder = os.path.join(mcf._home_path,str(fedid),str(rbnumberID))
             # rb folder must be present!
             current_user.set_user_properties(str(instrument),str(date),str(cycle),rb_user_folder)
         #end if
@@ -337,14 +337,17 @@ if not WinDebug:
 # replace users sample script. Should be used only if bugs are identified in the previous sample script.
 #mcf._force_change_script = True
 print "Start building ISIS direct inelastic configurations for MANTID"
+n_users = 0
 if buildISISDirectConfig:
     # Generate Mantid configurations for all users who does not yet have their own
-    for user_prop in user_list.itervalues():
+    for userID,user_prop in user_list.iteritems():
         try:
             mcf.init_user(user_prop)
             mcf.generate_config()
+            n_users +=1
         except (RuntimeError,AttributeError) as er:
-            send_error("Error for user: {0}"+er.message,2,1)
-        
-
+            send_error("Configuring user: {0} Error {1}".format(userID,er.message),2,1)
+        except Exception as er:
+            send_error("Configuring user: {0} Script error {1}".format(userID,str(er)),2,1)
+print "Configured", n_users," ISIS direct inelastic users"
 
