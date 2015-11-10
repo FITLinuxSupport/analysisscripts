@@ -76,16 +76,42 @@ def test_path(path):
     else:
         print "Fatal error in path: ",path
         send_error(path,1,1)
+
 #-------------------------------------------------------------
-# Server specific part with hard-coded path-es
+# Server specific part with hard-coded path-es 
 #-------------------------------------------------------------
 if platform.system() == 'Windows':
-    sys.path.insert(0,'c:/Mantid/scripts/Inelastic/Direct')
-    WinDebug=True
+        sys.path.insert(0,'c:/Mantid/scripts/Inelastic/Direct')
+
+        base = 'd:/Data/Mantid_Testing/config_script_test_folder'
+        analysisDir= base
+
+        MantidDir = r"c:\Mantid\_builds\br_master\bin\Release"
+        UserScriptRepoDir = os.path.join(analysisDir,"UserScripts")
+        MapMaskDir =  os.path.join(analysisDir,"InstrumentFiles")
+
+        rootDir = os.path.join(base,'users')
+
+        WinDebug = True
 else:
-    #sys.path.insert(0,'/opt/mantidnightly/scripts/Inelastic/Direct/')
-    sys.path.insert(0,'/opt/Mantid/scripts/Inelastic/Direct/')
-    WinDebug=False
+        sys.path.insert(0,'/opt/Mantid/scripts/Inelastic/Direct/')
+        #sys.path.insert(0,'/opt/mantidnightly/scripts/Inelastic/Direct/')
+
+# On analysis machines:
+        MantidDir = '/opt/Mantid'
+        MapMaskDir = '/usr/local/mprogs/InstrumentFiles/'
+        UserScriptRepoDir = '/opt/UserScripts'
+        #
+        rootDir = "/home/"
+        test_path(rootDir)
+        #
+        analysisDir = "/instrument/"
+        test_path(analysisDir)
+
+        home = '/home'
+
+        WinDebug = False
+
 
 try:
     from ISISDirecInelasticConfig import MantidConfigDirectInelastic,UserProperties
@@ -94,33 +120,6 @@ try:
 except Exception:
     print "Failed to import ISIS Inelastic Configuration script: ",sys.exc_info()[0]
     buildISISDirectConfig=False
-
-#
-#-------------------------------------------------------------
-# Path needed on server for this script to work
-#-------------------------------------------------------------
-if WinDebug:
-    base = 'd:/Data/Mantid_Testing/config_script_test_folder'
-    rootDir = os.path.join(base,'users')
-    analysisDir= base
-else:
-    rootDir = "/home/"
-    test_path(rootDir)
-    analysisDir = "/instrument/"
-    test_path(analysisDir)
-
-# On analysis machines:
-MantidDir = '/opt/Mantid'
-MapMaskDir = '/usr/local/mprogs/InstrumentFiles/'
-UserScriptRepoDir = '/opt/UserScripts'
-
-#Win Debug
-if WinDebug:
-    MantidDir = r"c:\Mantid\_builds\br_master\bin\Release"
-    UserScriptRepoDir = os.path.join(analysisDir,"UserScripts")
-    MapMaskDir =  os.path.join(analysisDir,"InstrumentFiles")
-else:
-    home = '/home'
 
 #
 
@@ -337,6 +336,7 @@ if not WinDebug:
 #mcf._force_change_config = True
 # replace users sample script. Should be used only if bugs are identified in the previous sample script.
 #mcf._force_change_script = True
+print "Start building ISIS direct inelastic configurations for MANTID"
 if buildISISDirectConfig:
     # Generate Mantid configurations for all users who does not yet have their own
     for user_prop in user_list.itervalues():
@@ -344,6 +344,7 @@ if buildISISDirectConfig:
             mcf.init_user(user_prop)
             mcf.generate_config()
         except (RuntimeError,AttributeError) as er:
-            send_error(er.message,2,1)
+            send_error("Error for user: {0}"+er.message,2,1)
+        
 
 
