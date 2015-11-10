@@ -1,4 +1,4 @@
-#!/usr/bin/python
+﻿#!/usr/bin/python
 import json
 #import libuser
 import urllib
@@ -324,7 +324,7 @@ for experiment in data["experiments"]:
             # and rb folder. If more then one record per user, the latest will be active
             rb_user_folder = os.path.join(mcf._home_path,str(fedid),str(rbnumberID))
             # rb folder must be present!
-            current_user.set_user_properties(str(instrument),str(date),str(cycle),rb_user_folder)
+            current_user.set_user_properties(str(instrument),rb_user_folder,str(cycle),str(date))
         #end if
 json_data.close()
 if not WinDebug:
