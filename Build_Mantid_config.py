@@ -1,4 +1,4 @@
-#!/usr/bin/python
+﻿#!/usr/bin/python
 import json
 #import libuser
 import urllib
@@ -24,41 +24,7 @@ from distutils.dir_util import mkpath
 sysadmin_email = ["warren.jeffs@stfc.ac.uk", "leon.nell@stfc.ac.uk", "darren.gilbert@stfc.ac.uk"]
 # Setup web proxy
 proxies = {'http': 'http://wwwcache.rl.ac.uk:8080'}
-#--------------------------------------------------------------------
-# Server specific part with hard-coded path-es used in configuration
-#--------------------------------------------------------------------
-if platform.system() == 'Windows':
-    sys.path.insert(0,'c:/Mantid/scripts/Inelastic/Direct')
-    base = r'd:\Data\Mantid_Testing\config_script_test_folder'
-    analysisDir= os.path.join(base,"instrument")
 
-    MantidDir = r"c:\Mantid\_builds\br_master\bin\Release"
-    UserScriptRepoDir = os.path.join(base,"UserScripts")
-    MapMaskDir =  os.path.join(base ,"InstrumentFiles")
-
-    homeDir = os.path.join(base,'users')
-    # user office data location
-    ExpDescriptorsFile = "c:/temp/excitations.txt"
-
-
-    WinDebug = True
-else: # Unix
-    sys.path.insert(0,'/opt/Mantid/scripts/Inelastic/Direct/')
-    #sys.path.insert(0,'/opt/mantidnightly/scripts/Inelastic/Direct/')
-# On analysis machines:
-    MantidDir = '/opt/Mantid'
-    MapMaskDir = '/usr/local/mprogs/InstrumentFiles/'
-    UserScriptRepoDir = '/opt/UserScripts'
-    #
-    homeDir = "/home/"
-    test_path(homeDir)
-    #
-    analysisDir = "/instrument/"
-    test_path(analysisDir)
-
-    # user office data location
-    ExpDescriptorsFile = "/tmp/excitations.txt"
-    WinDebug = False
 #--------------------------------------------------------------------
 #  Routines definitions:
 #--------------------------------------------------------------------
@@ -115,6 +81,43 @@ def test_path(path):
         print "Fatal error in path: ",path
         send_error(path,1,1)
 #
+
+#--------------------------------------------------------------------
+# Server specific part with hard-coded path-es used in configuration
+#--------------------------------------------------------------------
+if platform.system() == 'Windows':
+    sys.path.insert(0,'c:/Mantid/scripts/Inelastic/Direct')
+    base = r'd:\Data\Mantid_Testing\config_script_test_folder'
+    analysisDir= os.path.join(base,"instrument")
+
+    MantidDir = r"c:\Mantid\_builds\br_master\bin\Release"
+    UserScriptRepoDir = os.path.join(base,"UserScripts")
+    MapMaskDir =  os.path.join(base ,"InstrumentFiles")
+
+    homeDir = os.path.join(base,'users')
+    # user office data location
+    ExpDescriptorsFile = "c:/temp/excitations.txt"
+
+
+    WinDebug = True
+else: # Unix
+    sys.path.insert(0,'/opt/Mantid/scripts/Inelastic/Direct/')
+    #sys.path.insert(0,'/opt/mantidnightly/scripts/Inelastic/Direct/')
+# On analysis machines:
+    MantidDir = '/opt/Mantid'
+    MapMaskDir = '/usr/local/mprogs/InstrumentFiles/'
+    UserScriptRepoDir = '/opt/UserScripts'
+    #
+    homeDir = "/home/"
+    test_path(homeDir)
+    #
+    analysisDir = "/instrument/"
+    test_path(analysisDir)
+
+    # user office data location
+    ExpDescriptorsFile = "/tmp/excitations.txt"
+    WinDebug = False
+
 def check_or_create_rb_link(homeDir,fedid,sys_rbdir,rbnumberID,create_group=True):
     """Function checks if  link to RB folder exist for the user
        and if not creates one
