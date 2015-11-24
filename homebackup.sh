@@ -70,7 +70,7 @@ SOURCEFOLDER=home
     echo "Running backup on: $SOURCEFOLDER" >>$LOGFILE
 
     #list folders in above folder that are not symbolic links
-    for DIR in $(sudo find /$SOURCEFOLDER/ -maxdepth 1 -type d| grep -vw /$SOURCEFOLDER/|sed -n -e $NAMERANGE\p)
+    for DIR in $(sudo find /$SOURCEFOLDER/ -maxdepth 1 -type d| grep -vw /$SOURCEFOLDER/|sed -n -e $FOLDERRANGE\p)
     do
 
 		  #get foldername from the path
