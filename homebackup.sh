@@ -1,9 +1,14 @@
-#!/bin/bash -x
+#!/bin/bash
 
 
 #standard variables
-LOGFILE=/var/log/homebackup$(date +%d-%m-%y_%H:%M:%S)
+LOGFILE=/tmp/homebackup$(date +%d-%m-%y)
 DATE=$(date +%d-%m-%y)
+#STAGINGAREA=/ceph/backupstaging
+STAGINGAREA=/tmp
+
+#folder range - this can be used to limit the certain folders you are backing up. ie 1,5 will take the first 5, 12,20 will take folders 12-20
+FOLDERRANGE=3,5
 
 #setting up test and full run modes
 TESTONLY=0
@@ -18,7 +23,7 @@ while getopts ":tn" opt; do
 
 		n)
 			#set full run mode
-			NORMAL=0
+			NORMAL=1
 			;;
 		/?)
 			echo "Invalid option specified: -$OPTARG"
@@ -53,48 +58,63 @@ else
   echo -e "RUNNING IN FULL MODE - BACKUP WILL HAPPEN!!\n" >>$LOGFILE
   echo -e "RUNNING IN FULL MODE - BACKUP WILL HAPPEN!!\n" >>$LOGFILE
 fi
+  echo "Start time: $(date)" >>$LOGFILE
+
 echo -e "-------------------------------------------------------------" >>$LOGFILE
 
 
 
 #specify your folder you'd like this to run on.
-for SOURCEFOLDER in ceph/home
-        do
-                echo "Running backup on: $SOURCEFOLDER" >>$LOGFILE
-                #find folders in above folder that are not symbolic links
-                for DIR in $(find /$SOURCEFOLDER/ -type d -maxdepth 1 | grep -vw /ceph/home/)
-                do
+SOURCEFOLDER=home
 
-		    #get foldername from the path
-		    FOLDERNAME=$(basename $DIR)
-                    #tar and split this
-		    echo "TAR'ing $FOLDERNAME" from "$DIR">>$LOGFILE
-		    
-		    #run check if in test mode if go just echo commands that would be run, else run commands
-		    if ["$TESTONLY" -eq 1];
+    echo "Running backup on: $SOURCEFOLDER" >>$LOGFILE
+
+    #list folders in above folder that are not symbolic links
+    for DIR in $(sudo find /$SOURCEFOLDER/ -maxdepth 1 -type d| grep -vw /$SOURCEFOLDER/|sed -n -e $NAMERANGE\p)
+    do
+
+		  #get foldername from the path
+		  FOLDERNAME=$(basename $DIR)
+		  echo "TAR'ing $FOLDERNAME" from "$DIR">>$LOGFILE
+
+		  #run check if in test mode if go just echo commands that would be run, else run commands
+		  if [ "$TESTONLY" -eq 1 ];
 		    then
-  	                echo "tar -cvzf - $DIR |split --bytes=1TB - /ceph/backupstaging/$FOLDERNAME.tar.gz.">>$LOGFILE >>$LOGFILE
-                    	echo "xrdcp /ceph/backupstaging/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/$DATE$DIR/" >>$LOGFILE
-			echo "removing tempfile /ceph/backupstaging/$FOLDERNAME.tar.gz">>$LOGFILE
-                    echo "rm -rf /ceph/backupstaging/$FOLDERNAME.tar.gz*" >>$LOGFILE
+  	      echo "tar -czf - $DIR |split --bytes=1TB - $STAGINGAREA/$FOLDERNAME.tar.gz.">>$LOGFILE
+          echo "xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/$DATE$DIR/" >>$LOGFILE
+			    echo "removing tempfile $STAGINGAREA/$FOLDERNAME.tar.gz">>$LOGFILE
+          echo "rm -rf $STAGINGAREA/$FOLDERNAME.tar.gz*" >>$LOGFILE
+        fi
 
-		    else
-			#tar the files and split into 1TB chunks. This will continue trying to run until completes successfully.
-			until tar --use-compress-program=pigz -cvf - $DIR |split --bytes=1TB - /ceph/backupstaging/$FOLDERNAME.tar.gz.; do
-				echo "Tar'ing $HOMEFOLDERNAME failed retrying in 5 seconds"
-				sleep 5
-			done 
+        if [ "$NORMAL" -eq 1 ]
+        then
+          #tar the files and split into 1TB chunks. This will continue trying to run until completes successfully.
+          echo "Tar start time: $(date)" >> $LOGFILE
+            until sudo tar --use-compress-program=pigz -cvf - $DIR 2>>$LOGFILE  |split --bytes=1TB - $STAGINGAREA/$FOLDERNAME.tar.gz. ; do
+				    echo "Tar'ing $HOMEFOLDERNAME failed retrying in 5 seconds" >>$LOGFILE
+            echo "Tar failed time: $(date)" >>$LOGFILE
+				    sleep 5
+            echo "Tar restarting time: $(date)" >> $LOGFILE
+			    done
+			    echo "Tar finish time: $(date)" >> $LOGFILE
 
-			#send the files to CASTOR using xrdcp. Will keep trying until completed successfully 		    
-		      	until xrdcp /ceph/backupstaging/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/$DATE$DIR/ ; do
-				echo " xrdcp copy has failed on $FOLDERNAME, restarting in 10 secounds...."
-				sleep 10
-			done
-				
-			echo "removing tempfile /ceph/backupstaging/$FOLDERNAME.tar.gz" >>$LOGFILE
-			echo "rm -rf /ceph/backupstaging/$FOLDERNAME.tar.gz*" >>$LOGFILE
-		    	rm -rf /ceph/backupstaging/$FOLDERNAME.tar.gz*
-		    fi
-         done
+			#send the files to CASTOR using xrdcp. Will keep trying until completed successfully
+        echo " Copying $FOLDERNAME.tar.gz to SCD Via xrdcp"
+        echo "xrdcp start time: $(date)" >> $LOGFILE
+          until xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/$DATE$DIR/ ; do
+            echo " xrdcp copy has failed on $FOLDERNAME.tar.gz, restarting in 10 secounds...." >>$LOGFILE
+            echo " xrdcp copy failed time: $(date)" >> $LOGFILE
+				    sleep 10
+            echo "xrdcp copy restarting time: $(date)" >>$LOGFILE
+          done
 
+			    echo "removing tempfile $STAGINGAREA/$FOLDERNAME.tar.gz" >>$LOGFILE
+			    echo "rm -rf $STAGINGAREA/$FOLDERNAME.tar.gz*" >>$LOGFILE
+#		    	rm -rf $STAGINGAREA/$FOLDERNAME.tar.gz*
+		  fi
 done
+
+echo "End time: $(date)" >>$LOGFILE
+echo -e "---------------------------------------------------------------" >>$LOGFILE
+
+
