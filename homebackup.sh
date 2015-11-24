@@ -2,13 +2,13 @@
 
 
 #standard variables
-LOGFILE=/tmp/homebackup$(date +%d-%m-%y)
+LOGFILE=/ceph/backupstaging/homebackup$(date +%d-%m-%y)
 DATE=$(date +%d-%m-%y)
 #STAGINGAREA=/ceph/backupstaging
-STAGINGAREA=/tmp
+STAGINGAREA=/ceph/backupstaging
 
 #folder range - this can be used to limit the certain folders you are backing up. ie 1,5 will take the first 5, 12,20 will take folders 12-20
-FOLDERRANGE=3,5
+FOLDERRANGE=1,2
 
 #setting up test and full run modes
 TESTONLY=0
@@ -101,6 +101,7 @@ SOURCEFOLDER=home
 			#send the files to CASTOR using xrdcp. Will keep trying until completed successfully
         echo " Copying $FOLDERNAME.tar.gz to SCD Via xrdcp"
         echo "xrdcp start time: $(date)" >> $LOGFILE
+          sudo chmod 777 $STAGINGAREA/$FOLDERNAME.tar.gz*
           until xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/$DATE$DIR/ ; do
             echo " xrdcp copy has failed on $FOLDERNAME.tar.gz, restarting in 10 secounds...." >>$LOGFILE
             echo " xrdcp copy failed time: $(date)" >> $LOGFILE
