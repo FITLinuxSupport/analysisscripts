@@ -2,13 +2,13 @@
 
 
 #standard variables
-LOGFILE=/ceph/backupstaging/homebackup$(date +%d-%m-%y)
+LOGFILE=/ceph/backupstaging/homebackup2$(date +%d-%m-%y)
 DATE=$(date +%d-%m-%y)
 #STAGINGAREA=/ceph/backupstaging
 STAGINGAREA=/ceph/backupstaging
 
 #folder range - this can be used to limit the certain folders you are backing up. ie 1,5 will take the first 5, 12,20 will take folders 12-20
-FOLDERRANGE=1,2
+FOLDERRANGE=50,75
 
 #setting up test and full run modes
 TESTONLY=0
@@ -68,7 +68,8 @@ echo -e "-------------------------------------------------------------" >>$LOGFI
 SOURCEFOLDER=home
 
     echo "Running backup on: $SOURCEFOLDER" >>$LOGFILE
-
+	touch $LOGFILE
+	chmod 777 $LOGFILE
     #list folders in above folder that are not symbolic links
     for DIR in $(sudo find /$SOURCEFOLDER/ -maxdepth 1 -type d| grep -vw /$SOURCEFOLDER/|sed -n -e $FOLDERRANGE\p)
     do
@@ -76,12 +77,13 @@ SOURCEFOLDER=home
 		  #get foldername from the path
 		  FOLDERNAME=$(basename $DIR)
 		  echo "TAR'ing $FOLDERNAME" from "$DIR">>$LOGFILE
+		  echo -e "-------------------------------------------------------------" >>$LOGFILE
 
 		  #run check if in test mode if go just echo commands that would be run, else run commands
 		  if [ "$TESTONLY" -eq 1 ];
 		    then
-  	      echo "tar -czf - $DIR |split --bytes=1TB - $STAGINGAREA/$FOLDERNAME.tar.gz.">>$LOGFILE
-          echo "xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/$DATE$DIR/" >>$LOGFILE
+  	      echo "tar -b 20 -czf - $DIR |split --bytes=100GB - $STAGINGAREA/$FOLDERNAME.tar.gz.">>$LOGFILE
+          echo "xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/November2015$DIR/" >>$LOGFILE
 			    echo "removing tempfile $STAGINGAREA/$FOLDERNAME.tar.gz">>$LOGFILE
           echo "rm -rf $STAGINGAREA/$FOLDERNAME.tar.gz*" >>$LOGFILE
         fi
@@ -90,7 +92,7 @@ SOURCEFOLDER=home
         then
           #tar the files and split into 1TB chunks. This will continue trying to run until completes successfully.
           echo "Tar start time: $(date)" >> $LOGFILE
-            until sudo tar --use-compress-program=pigz -cvf - $DIR 2>>$LOGFILE  |split --bytes=1TB - $STAGINGAREA/$FOLDERNAME.tar.gz. ; do
+            until sudo tar --use-compress-program=pigz -b 20 -X ./fileexcludelist.txt -cvf - $DIR 2>>$LOGFILE  |split --bytes=100GB - $STAGINGAREA/$FOLDERNAME.tar.gz. ; do
 				    echo "Tar'ing $HOMEFOLDERNAME failed retrying in 5 seconds" >>$LOGFILE
             echo "Tar failed time: $(date)" >>$LOGFILE
 				    sleep 5
@@ -99,10 +101,11 @@ SOURCEFOLDER=home
 			    echo "Tar finish time: $(date)" >> $LOGFILE
 
 			#send the files to CASTOR using xrdcp. Will keep trying until completed successfully
-        echo " Copying $FOLDERNAME.tar.gz to SCD Via xrdcp"
+        echo " Copying $FOLDERNAME.tar.gz to SCD Via xrdcp">>$LOGFILE
         echo "xrdcp start time: $(date)" >> $LOGFILE
           sudo chmod 777 $STAGINGAREA/$FOLDERNAME.tar.gz*
-          until xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/$DATE$DIR/ ; do
+          echo " xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/November2015$DIR/" >>$LOGFILE
+	  until xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/November2015$DIR/ -f  2>>$LOGFILE; do
             echo " xrdcp copy has failed on $FOLDERNAME.tar.gz, restarting in 10 secounds...." >>$LOGFILE
             echo " xrdcp copy failed time: $(date)" >> $LOGFILE
 				    sleep 10
@@ -110,9 +113,11 @@ SOURCEFOLDER=home
           done
 
 			    echo "removing tempfile $STAGINGAREA/$FOLDERNAME.tar.gz" >>$LOGFILE
-			    echo "rm -rf $STAGINGAREA/$FOLDERNAME.tar.gz*" >>$LOGFILE
-#		    	rm -rf $STAGINGAREA/$FOLDERNAME.tar.gz*
+			    echo "rm -rf $STAGINGAREA/*.tar.gz*" >>$LOGFILE
+#		    	rm -rf $STAGINGAREA/*.tar.gz*
 		  fi
+	echo -e "-------------------------------------------------------------" >>$LOGFILE
+
 done
 
 echo "End time: $(date)" >>$LOGFILE
