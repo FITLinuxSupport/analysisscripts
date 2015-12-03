@@ -2,7 +2,7 @@
 
 
 #standard variables
-LOGFILE=/ceph/backupstaging/homebackup2$(date +%d-%m-%y)
+LOGFILE=/ceph/backupstaging/homebackup$(date +%d-%m-%y)
 DATE=$(date +%d-%m-%y)
 #STAGINGAREA=/ceph/backupstaging
 STAGINGAREA=/ceph/backupstaging
