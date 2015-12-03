@@ -8,7 +8,7 @@ DATE=$(date +%d-%m-%y)
 STAGINGAREA=/ceph/backupstaging
 
 #folder range - this can be used to limit the certain folders you are backing up. ie 1,5 will take the first 5, 12,20 will take folders 12-20
-FOLDERRANGE=50,75
+FOLDERRANGE=1,50
 
 #setting up test and full run modes
 TESTONLY=0
@@ -83,7 +83,7 @@ SOURCEFOLDER=home
 		  if [ "$TESTONLY" -eq 1 ];
 		    then
   	      echo "tar -b 20 -czf - $DIR |split --bytes=100GB - $STAGINGAREA/$FOLDERNAME.tar.gz.">>$LOGFILE
-          echo "xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/November2015$DIR/" >>$LOGFILE
+          echo "xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/December2015$DIR/" >>$LOGFILE
 			    echo "removing tempfile $STAGINGAREA/$FOLDERNAME.tar.gz">>$LOGFILE
           echo "rm -rf $STAGINGAREA/$FOLDERNAME.tar.gz*" >>$LOGFILE
         fi
@@ -104,8 +104,8 @@ SOURCEFOLDER=home
         echo " Copying $FOLDERNAME.tar.gz to SCD Via xrdcp">>$LOGFILE
         echo "xrdcp start time: $(date)" >> $LOGFILE
           sudo chmod 777 $STAGINGAREA/$FOLDERNAME.tar.gz*
-          echo " xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/November2015$DIR/" >>$LOGFILE
-	  until xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/November2015$DIR/ -f  2>>$LOGFILE; do
+          echo " xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/December2015$DIR/" >>$LOGFILE
+	  until xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/December2015$DIR/ -f  2>>$LOGFILE; do
             echo " xrdcp copy has failed on $FOLDERNAME.tar.gz, restarting in 10 secounds...." >>$LOGFILE
             echo " xrdcp copy failed time: $(date)" >> $LOGFILE
 				    sleep 10
