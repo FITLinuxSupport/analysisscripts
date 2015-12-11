@@ -109,7 +109,7 @@ SOURCEFOLDER=home
 		  
 		  
 		for TARFILE in $(sudo find $STAGINGAREA/ -maxdepth 1 -type f| grep $FOLDERNAME)
-		  
+		do
 					until xrdcp $TARFILE root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/December2015$DIR/ -f  2>>$LOGFILE; do
 						echo " xrdcp copy has failed on $FOLDERNAME.tar.gz, restarting in 10 secounds...." >>$LOGFILE
 						echo " xrdcp copy failed time: $(date)" >> $LOGFILE
