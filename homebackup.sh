@@ -105,17 +105,24 @@ SOURCEFOLDER=home
         echo "xrdcp start time: $(date)" >> $LOGFILE
           sudo chmod 777 $STAGINGAREA/$FOLDERNAME.tar.gz*
           echo " xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/December2015$DIR/" >>$LOGFILE
-	  until xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/December2015$DIR/ -f  2>>$LOGFILE; do
-            echo " xrdcp copy has failed on $FOLDERNAME.tar.gz, restarting in 10 secounds...." >>$LOGFILE
-            echo " xrdcp copy failed time: $(date)" >> $LOGFILE
-				    sleep 10
-            echo "xrdcp copy restarting time: $(date)" >>$LOGFILE
-          done
+		  
+		  
+		  
+		for TARFILE in $(sudo find $STAGINGAREA/ -maxdepth 1 -type f| grep $FOLDERNAME)
+		  
+					until xrdcp $TARFILE root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/December2015$DIR/ -f  2>>$LOGFILE; do
+						echo " xrdcp copy has failed on $FOLDERNAME.tar.gz, restarting in 10 secounds...." >>$LOGFILE
+						echo " xrdcp copy failed time: $(date)" >> $LOGFILE
+							sleep 10
+						echo "xrdcp copy restarting time: $(date)" >>$LOGFILE
+					done
 
 			    echo "removing tempfile $STAGINGAREA/$FOLDERNAME.tar.gz" >>$LOGFILE
-			    echo "rm -rf $STAGINGAREA/*.tar.gz*" >>$LOGFILE
-#		    	rm -rf $STAGINGAREA/*.tar.gz*
-		  fi
+			    echo "rm -rf $TARFILE" >>$LOGFILE
+		    	rm -rf $TARFILE
+		done
+
+		fi
 	echo -e "-------------------------------------------------------------" >>$LOGFILE
 
 done
