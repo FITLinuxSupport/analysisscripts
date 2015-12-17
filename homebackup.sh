@@ -8,7 +8,7 @@ DATE=$(date +%d-%m-%y)
 STAGINGAREA=/ceph/backupstaging
 
 #folder range - this can be used to limit the certain folders you are backing up. ie 1,5 will take the first 5, 12,20 will take folders 12-20
-FOLDERRANGE=1,50
+FOLDERRANGE=500,641
 
 #setting up test and full run modes
 TESTONLY=0
