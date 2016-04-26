@@ -341,9 +341,14 @@ if not WinDebug:
 #mcf._force_change_script = True
 print "Start building ISIS direct inelastic configurations for MANTID"
 n_users = 0
+# list of users who participate in all cycles but never would participate in an experiment alone
+# so no need to generate configuration for them.
+service_users = ['gpq43739','wkc26243','wvy65637','isisautoreduce']
 if buildISISDirectConfig:
     # Generate Mantid configurations for all users who does not yet have their own
     for userID,user_prop in user_list.iteritems():
+        if userID in service_users:
+            continue
         try:
             mcf.init_user(user_prop)
             mcf.generate_config()
@@ -352,5 +357,7 @@ if buildISISDirectConfig:
             send_error("Configuring user: {0} Error {1}".format(userID,er.message),2,1)
         except Exception as er:
             send_error("Configuring user: {0} Script error {1}".format(userID,str(er)),2,1)
+        if os.path.isfile('d:\Data\Mantid_Testing\config_script_test_folder\users\kfh56921\RB1610371\MERLINReduction_2015_4.py') :
+            continue
 print "Configured", n_users," ISIS direct inelastic users"
 
