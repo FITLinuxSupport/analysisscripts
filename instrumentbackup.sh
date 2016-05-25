@@ -2,13 +2,10 @@
 
 
 #standard variables
-LOGFILE=/ceph/backupstaging/homebackup$(date +%d-%m-%y)
+LOGFILE=/ceph/backupstaging/instrumentbackup$(date +%d-%m-%y)
 DATE=$(date +%d-%m-%y)
 #STAGINGAREA=/ceph/backupstaging
 STAGINGAREA=/ceph/backupstaging
-
-#folder range - this can be used to limit the certain folders you are backing up. ie 1,5 will take the first 5, 12,20 will take folders 12-20
-FOLDERRANGE=1,700
 
 #setting up test and full run modes
 TESTONLY=0
@@ -65,15 +62,18 @@ echo -e "-------------------------------------------------------------" >>$LOGFI
 
 
 #specify your folder you'd like this to run on.
-SOURCEFOLDER=home
+SOURCEFOLDER=instrument
 
     echo "Running backup on: $SOURCEFOLDER" >>$LOGFILE
 	touch $LOGFILE
 	chmod 777 $LOGFILE
     #list folders in above folder that are not symbolic links
-    for DIR in $(sudo find /$SOURCEFOLDER/ -maxdepth 1 -type d| grep -vw /$SOURCEFOLDER/|grep -vw /home/ceph|sed -n -e $FOLDERRANGE\p)
+    for INSTRUMENT in $(sudo find /$SOURCEFOLDER/ -maxdepth 1 -type d| grep -vw /$SOURCEFOLDER/)
     do
-
+	INSTRUMENTNAME=$(basename $INSTRUMENT)
+		for DIR in $(sudo find /instrument/$INSTRUMENTNAME/RBNumber/ -maxdepth 1 -type d| grep -vw "/instrument/$INSTRUMENTNAME/RBNumber/")
+		do
+		
 		  #get foldername from the path
 		  FOLDERNAME=$(basename $DIR)
 		  echo "TAR'ing $FOLDERNAME" from "$DIR">>$LOGFILE
@@ -124,10 +124,8 @@ SOURCEFOLDER=home
 
 		fi
 	echo -e "-------------------------------------------------------------" >>$LOGFILE
-
+   done
 done
 
 echo "End time: $(date)" >>$LOGFILE
 echo -e "---------------------------------------------------------------" >>$LOGFILE
-
-

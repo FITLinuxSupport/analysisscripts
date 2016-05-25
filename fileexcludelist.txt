@@ -2,3 +2,10 @@
 *.spe
 *.sqw
 *.raw
+*.nxs
+*.tmp
+*.old
+*.zip
+*.gz
+*.tar
+*.tgz
