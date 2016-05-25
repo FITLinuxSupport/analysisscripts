@@ -70,9 +70,15 @@ SOURCEFOLDER=instrument
     #list folders in above folder that are not symbolic links
     for INSTRUMENT in $(sudo find /$SOURCEFOLDER/ -maxdepth 1 -type d| grep -vw /$SOURCEFOLDER/)
     do
+<<<<<<< HEAD
 	INSTRUMENTNAME=$(basename $INSTRUMENT)
 		for DIR in $(sudo find /instrument/$INSTRUMENTNAME/RBNumber/ -maxdepth 1 -type d| grep -vw "/instrument/$INSTRUMENTNAME/RBNumber/")
 		do
+=======
+		for DIR in $(sudo find $INSTRUMENT -maxdepth 1 -type d| grep -vw INSTRUMENT/)
+		
+		
+>>>>>>> 021bc6842da64bed8ddb33c600042612d6c316c8
 		
 		  #get foldername from the path
 		  FOLDERNAME=$(basename $DIR)
@@ -104,16 +110,27 @@ SOURCEFOLDER=instrument
         echo " Copying $FOLDERNAME.tar.gz to SCD Via xrdcp">>$LOGFILE
         echo "xrdcp start time: $(date)" >> $LOGFILE
           sudo chmod 777 $STAGINGAREA/$FOLDERNAME.tar.gz*
+<<<<<<< HEAD
           echo " xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/Feb2016$DIR/" >>$LOGFILE
+=======
+          echo " xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/December2015$DIR/" >>$LOGFILE
+>>>>>>> 021bc6842da64bed8ddb33c600042612d6c316c8
 		  
 		  
 		  
 		for TARFILE in $(sudo find $STAGINGAREA/ -maxdepth 1 -type f| grep $FOLDERNAME)
 		do
+<<<<<<< HEAD
 					until xrdcp $TARFILE root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/Feb2016$DIR/ -f  2>>$LOGFILE; do
 						echo " xrdcp copy has failed on $FOLDERNAME.tar.gz, restarting in 10 secounds...." >>$LOGFILE
 						echo " xrdcp copy failed time: $(date)" >> $LOGFILE
 							sleep 1
+=======
+					until xrdcp $TARFILE root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/December2015$DIR/ -f  2>>$LOGFILE; do
+						echo " xrdcp copy has failed on $FOLDERNAME.tar.gz, restarting in 10 secounds...." >>$LOGFILE
+						echo " xrdcp copy failed time: $(date)" >> $LOGFILE
+							sleep 10
+>>>>>>> 021bc6842da64bed8ddb33c600042612d6c316c8
 						echo "xrdcp copy restarting time: $(date)" >>$LOGFILE
 					done
 
@@ -129,3 +146,8 @@ done
 
 echo "End time: $(date)" >>$LOGFILE
 echo -e "---------------------------------------------------------------" >>$LOGFILE
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 021bc6842da64bed8ddb33c600042612d6c316c8
