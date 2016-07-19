@@ -3,8 +3,6 @@
 # Should run hourly form cron as root to update
 # user script repositories and users insrument files
 # on at least one analysis machines connected to CEPS
-export http_proxy=http://wwwcache.rl.ac.uk:8080
-export https_proxy=http://wwwcache.rl.ac.uk:8080
 cd /opt/UserScripts/
 git pull
 cd /usr/local/mprogs/InstrumentFiles/
