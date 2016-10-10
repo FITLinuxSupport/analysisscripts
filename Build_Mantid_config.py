@@ -23,7 +23,7 @@ from distutils.dir_util import mkpath
 
 sysadmin_email = ["warren.jeffs@stfc.ac.uk", "leon.nell@stfc.ac.uk", "darren.gilbert@stfc.ac.uk"]
 # Setup web proxy
-proxies = {'http': 'http://wwwcache.rl.ac.uk:8080'}
+#proxies = {'http': 'http://wwwcache.rl.ac.uk:8080'}
 
 #--------------------------------------------------------------------
 #  Routines definitions:
@@ -176,7 +176,7 @@ except:
 # Get the output from the user office data which is published
 # as a web page in JSON
 
-opener = urllib.FancyURLopener(proxies)
+#opener = urllib.FancyURLopener(proxies)
 # Get the user office data.
 urllib.urlretrieve("http://icatingest2.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile)
 #urllib.urlretrieve("http://fitlnxdeploy.isis.cclrc.ac.uk/excitations.txt",ExpDescriptorsFile+'.old')
@@ -196,6 +196,7 @@ if not WinDebug:
 user_list = {}
 user_verified_list = []
 users_rejected_list = []
+rb_key_user_inelastic = {};
 
 #print len(data["experiments"])
 for experiment in data["experiments"]:
@@ -320,8 +321,14 @@ for experiment in data["experiments"]:
             continue
         # Define Direct inelastic User
         if mcf.is_inelastic(instrument):
+           # make first user a key user for given rb number
+            if not rbnumberID in rb_key_user_inelastic:
+                rb_key_user_inelastic[str(rbnumberID)] = fedid
+
             if not fedid in user_list:
                 user_list[str(fedid)] = UserProperties(str(fedid))
+
+
             current_user = user_list[fedid]
             # Define user's properties, e.g. cycle, instrument, start data 
             # and rb folder. If more then one record per user, the latest will be active
@@ -351,13 +358,15 @@ if buildISISDirectConfig:
             continue
         try:
             mcf.init_user(user_prop)
-            mcf.generate_config()
+            mcf.generate_config(rb_key_user_inelastic)
             n_users +=1
         except (RuntimeError,AttributeError) as er:
             send_error("Configuring user: {0} Error {1}".format(userID,er.message),2,1)
+            #pass
         except Exception as er:
             send_error("Configuring user: {0} Script error {1}".format(userID,str(er)),2,1)
-        if os.path.isfile('d:\Data\Mantid_Testing\config_script_test_folder\users\kfh56921\RB1610371\MERLINReduction_2015_4.py') :
-            continue
+            #pass
+        #if os.path.isfile('d:\Data\Mantid_Testing\config_script_test_folder\users\kfh56921\RB1610371\MERLINReduction_2015_4.py') :
+        #    continue
 print "Configured", n_users," ISIS direct inelastic users"
 
