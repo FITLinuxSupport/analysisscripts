@@ -346,7 +346,9 @@ if not WinDebug:
 #mcf._force_change_config = True
 # replace users sample script. Should be used only if bugs are identified in the previous sample script.
 #mcf._force_change_script = True
-print "Start building ISIS direct inelastic configurations for MANTID"
+print "*** ************************************************************** ***"
+print "*** Start building ISIS direct inelastic configurations for MANTID ***"
+print "*** ************************************************************** ***"
 n_users = 0
 # list of users who participate in all cycles but never would participate in an experiment alone
 # so no need to generate configuration for them.
@@ -368,5 +370,7 @@ if buildISISDirectConfig:
             #pass
         #if os.path.isfile('d:\Data\Mantid_Testing\config_script_test_folder\users\kfh56921\RB1610371\MERLINReduction_2015_4.py') :
         #    continue
-print "Configured", n_users," ISIS direct inelastic users"
+print "*** ************************************************************** ***"
+print "*** Configured {0:5} ISIS direct inelastic users               ***".format(n_users)
+print "*** ************************************************************** ***"
 
