@@ -21,9 +21,7 @@ from pprint import pprint
 from distutils.dir_util import mkpath
 
 
-sysadmin_email = ["warren.jeffs@stfc.ac.uk", "leon.nell@stfc.ac.uk", "darren.gilbert@stfc.ac.uk"]
-# Setup web proxy
-#proxies = {'http': 'http://wwwcache.rl.ac.uk:8080'}
+sysadmin_email = ["warren.jeffs@stfc.ac.uk"]
 
 #--------------------------------------------------------------------
 #  Routines definitions:
