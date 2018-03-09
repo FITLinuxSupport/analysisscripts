@@ -4,7 +4,7 @@ import os
 import smtplib
 import socket 
 import sys
-
+import time
 from email.mime.text import MIMEText
 
 #--------------------------------------------------------------------
@@ -75,6 +75,7 @@ for retry in range(5):
 		print(mountcommand)
 		os.system(mountcommand)
 		send_error("",1,1)
+		time.sleep(5)
 
 else:
         #if after 5 tries still fails, close with error and send email
