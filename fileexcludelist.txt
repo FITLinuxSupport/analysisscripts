@@ -25,3 +25,5 @@
 *Trash*
 *.svn*
 *Melehan*
+*.felix*
+*.thumbnails*

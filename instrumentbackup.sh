@@ -85,7 +85,7 @@ SOURCEFOLDER=instrument
 		  if [ "$TESTONLY" -eq 1 ];
 		    then
   	      echo "tar -b 20 -czf - $DIR |split --bytes=100GB - $STAGINGAREA/$FOLDERNAME.tar.gz.">>$LOGFILE
-          echo "xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/Nov2016$DIR/" >>$LOGFILE
+          echo "xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/dec2017$DIR/" >>$LOGFILE
 			    echo "removing tempfile $STAGINGAREA/$FOLDERNAME.tar.gz">>$LOGFILE
           echo "rm -rf $STAGINGAREA/$FOLDERNAME.tar.gz*" >>$LOGFILE
         fi
@@ -106,14 +106,14 @@ SOURCEFOLDER=instrument
         echo " Copying $FOLDERNAME.tar.gz to SCD Via xrdcp">>$LOGFILE
         echo "xrdcp start time: $(date)" >> $LOGFILE
           sudo chmod 777 $STAGINGAREA/$FOLDERNAME.tar.gz*
-          echo " xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/Nov2016$DIR/" >>$LOGFILE
-          echo " xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/Nov2016$DIR/" >>$LOGFILE
+          echo " xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/dec2017$DIR/" >>$LOGFILE
+          echo " xrdcp $STAGINGAREA/$FOLDERNAME.tar.gz* root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/dec2017$DIR/" >>$LOGFILE
 		  
 		  
 		  
 		for TARFILE in $(sudo find $STAGINGAREA/ -maxdepth 1 -type f| grep $FOLDERNAME)
 		do
-					until xrdcp $TARFILE root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/Nov2016$DIR/ -f  2>>$LOGFILE; do
+					until xrdcp $TARFILE root://cfacdlf.esc.rl.ac.uk//castor/facilities/prod/isis_backup/dec2017$DIR/ -f  2>>$LOGFILE; do
 						echo " xrdcp copy has failed on $FOLDERNAME.tar.gz, restarting in 10 secounds...." >>$LOGFILE
 						echo " xrdcp copy failed time: $(date)" >> $LOGFILE
 							sleep 1
