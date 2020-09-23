@@ -6,4 +6,4 @@
 cd /opt/UserScripts/
 git pull
 cd /usr/local/mprogs/InstrumentFiles/
-svn update
+git pull

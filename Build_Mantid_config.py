@@ -74,9 +74,9 @@ def send_error(MessBody=None,ErrorCode=0,ExitScript=0):
 
 def test_path(path):
     if os.path.exists(path):
-        print "Path OK " + path
+        print( "Path OK " + path)
     else:
-        print "Fatal error in path: ",path
+        print( "Fatal error in path: ",path)
         send_error(path,1,1)
 #
 
@@ -133,7 +133,7 @@ def check_or_create_rb_link(homeDir,fedid,sys_rbdir,rbnumberID,create_group=True
     # Create link to appropriate RB folder.
     user_rb_dir = os.path.join(homeDir,rbnumberID)
     if os.path.exists(user_rb_dir):
-        print "Link exists: ",user_rb_dir
+        print( "Link exists: ",user_rb_dir)
         link_created = False
     else:
         if WinDebug:
@@ -153,13 +153,13 @@ try:
     buildISISDirectConfig=True
     try:
         mcf = MantidConfigDirectInelastic(MantidDir,homeDir,UserScriptRepoDir,MapMaskDir)
-        print "Successfully initialized ISIS Inelastic Configuration script generator"
+        print ("Successfully initialized ISIS Inelastic Configuration script generator")
     except RuntimeError as er:
         send_error(er.message,2,1)
         buildISISDirectConfig=False
-        print "Failed to initialize ISIS Inelastic Configuration script generator"
+        print ("Failed to initialize ISIS Inelastic Configuration script generator")
 except:
-    print "Failed to import ISIS Inelastic Configuration script: ",sys.exc_info()[0]
+    print ("Failed to import ISIS Inelastic Configuration script: ",sys.exc_info()[0])
     buildISISDirectConfig=False
 
 #
@@ -194,7 +194,7 @@ if not WinDebug:
 user_list = {}
 user_verified_list = []
 users_rejected_list = []
-rb_key_user_inelastic = {};
+rb_key_user_inelastic = {}
 
 #print len(data["experiments"])
 for experiment in data["experiments"]:
@@ -247,14 +247,14 @@ for experiment in data["experiments"]:
 
     #make cycle folder
     if os.path.exists(cycledir):
-        print "Path OK: " +cycledir+ "\n"
+        print ("Path OK: " +cycledir+ "\n")
     else:
         mkpath(cycledir)
 
 
     #make symb links from cycle -> individual RBs
     if os.path.exists(cyclerbdir):
-        print "Link exists: " +cyclerbdir+ "\n"
+        print ("Link exists: " +cyclerbdir+ "\n")
     else:
         if WinDebug:
             os.system("mklink /j {0} {1}".format(cyclerbdir,main_rbData_dir))
@@ -296,7 +296,7 @@ for experiment in data["experiments"]:
                 continue
            else:
                 user_verified_list.append(fedid)
-                print fedid + " OK"
+                print (fedid + " OK")
         # Check if person is already in this group
         if fedid in group_members:
             add_to_group = False
@@ -344,16 +344,16 @@ if not WinDebug:
 #mcf._force_change_config = True
 # replace users sample script. Should be used only if bugs are identified in the previous sample script.
 #mcf._force_change_script = True
-print "*** ************************************************************** ***"
-print "*** Start building ISIS direct inelastic configurations for MANTID ***"
-print "*** ************************************************************** ***"
+print ("*** ************************************************************** ***")
+print ("*** Start building ISIS direct inelastic configurations for MANTID ***")
+print ("*** ************************************************************** ***")
 n_users = 0
 # list of users who participate in all cycles but never would participate in an experiment alone
 # so no need to generate configuration for them.
 service_users = ['gpq43739','wkc26243','wvy65637','isisautoreduce']
 if buildISISDirectConfig:
     # Generate Mantid configurations for all users who does not yet have their own
-    for userID,user_prop in user_list.iteritems():
+    for userID,user_prop in user_list.items():
         if userID in service_users:
             continue
         try:
@@ -368,7 +368,6 @@ if buildISISDirectConfig:
             #pass
         #if os.path.isfile('d:\Data\Mantid_Testing\config_script_test_folder\users\kfh56921\RB1610371\MERLINReduction_2015_4.py') :
         #    continue
-print "*** ************************************************************** ***"
-print "*** Configured {0:5} ISIS direct inelastic users               ***".format(n_users)
-print "*** ************************************************************** ***"
-
+print ("*** ************************************************************** ***")
+print ("*** Configured {0:5} ISIS direct inelastic users               ***".format(n_users))
+print ("*** ************************************************************** ***")
